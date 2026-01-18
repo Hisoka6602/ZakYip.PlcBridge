@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Host", "ZakYip.PlcBridge.Host\ZakYip.PlcBridge.Host.csproj", "{51896BF5-6EDB-4A1B-A4A0-E967CB737305}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Drivers", "Drivers", "{C737466A-6584-4B5F-8902-DD23F6989883}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Execution", "Execution", "{D1FDC2A5-11A7-4005-8AC2-26C66EBFA584}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ingress", "Ingress", "{6F3E8291-1770-4062-BC1F-E04914DDD16B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Core", "ZakYip.PlcBridge.Core\ZakYip.PlcBridge.Core.csproj", "{C409D2BC-A1CF-4368-856F-43F3BE7235CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Drivers", "ZakYip.PlcBridge.Drivers\ZakYip.PlcBridge.Drivers.csproj", "{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Execution", "ZakYip.PlcBridge.Execution\ZakYip.PlcBridge.Execution.csproj", "{B214BA36-B527-4C2A-A5A1-91F00E240B3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Ingress", "ZakYip.PlcBridge.Ingress\ZakYip.PlcBridge.Ingress.csproj", "{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{51896BF5-6EDB-4A1B-A4A0-E967CB737305}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51896BF5-6EDB-4A1B-A4A0-E967CB737305}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51896BF5-6EDB-4A1B-A4A0-E967CB737305}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51896BF5-6EDB-4A1B-A4A0-E967CB737305}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C409D2BC-A1CF-4368-856F-43F3BE7235CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C409D2BC-A1CF-4368-856F-43F3BE7235CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C409D2BC-A1CF-4368-856F-43F3BE7235CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C409D2BC-A1CF-4368-856F-43F3BE7235CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B214BA36-B527-4C2A-A5A1-91F00E240B3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B214BA36-B527-4C2A-A5A1-91F00E240B3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B214BA36-B527-4C2A-A5A1-91F00E240B3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B214BA36-B527-4C2A-A5A1-91F00E240B3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C409D2BC-A1CF-4368-856F-43F3BE7235CC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402} = {C737466A-6584-4B5F-8902-DD23F6989883}
+		{B214BA36-B527-4C2A-A5A1-91F00E240B3C} = {D1FDC2A5-11A7-4005-8AC2-26C66EBFA584}
+		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4} = {6F3E8291-1770-4062-BC1F-E04914DDD16B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F3789D0C-F655-4E11-A176-1C8B983FD415}
+	EndGlobalSection
+EndGlobal
