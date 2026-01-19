@@ -101,6 +101,13 @@ namespace ZakYip.PlcBridge.Core.Manager {
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 读取 Int16 值（读取失败返回 null，异常通过 Faulted 事件隔离）
+        /// </summary>
+        ValueTask<int?> ReadInt16Async(
+            PlcInt32Address address,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 读取字符串值（读取失败返回 null，异常通过 Faulted 事件隔离）
         /// </summary>
         ValueTask<string?> ReadStringAsync(
@@ -112,6 +119,21 @@ namespace ZakYip.PlcBridge.Core.Manager {
         /// </summary>
         ValueTask WriteDbBoolsAsync(
             IReadOnlyList<PlcDbBoolWriteItem> items,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 读取 Byte 值（读取失败返回 null，异常通过 Faulted 事件隔离）
+        /// </summary>
+        ValueTask<byte?> ReadByteAsync(
+            PlcByteAddress address,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 写 Byte 值（写入失败通过 Faulted 事件隔离）
+        /// </summary>
+        ValueTask WriteByteAsync(
+            PlcByteAddress address,
+            byte value,
             CancellationToken cancellationToken = default);
     }
 }

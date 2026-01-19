@@ -634,7 +634,7 @@ namespace ZakYip.PlcBridge.Drivers {
         /// <remarks>
         /// - 地址对象允许不同命名字段，使用反射做兼容解析；
         /// - 使用 `ReadBytesAsync` 读取 4 字节；
-        /// - S7 多字节为大端序，因此使用 `ReadInt32BigEndian`。
+        /// - S7 多字节为大端序，因此使用 `ReadInt32LittleEndian`。
         /// </remarks>
         public async ValueTask<int?> ReadInt32Async(PlcInt32Address address, CancellationToken cancellationToken = default) {
             if (Volatile.Read(ref _disposed) == 1) {
@@ -684,6 +684,69 @@ namespace ZakYip.PlcBridge.Drivers {
             catch (Exception ex) {
                 MarkDisconnected("读取 Int32 异常");
                 RaiseFaulted("读取 Int32 异常", ex);
+                return null;
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        /// <summary>
+        /// 读取一个 Int32 值（失败返回 null；异常通过 Faulted 上报）。
+        /// </summary>
+        /// <remarks>
+        /// - 地址对象允许不同命名字段，使用反射做兼容解析；
+        /// - 使用 `ReadBytesAsync` 读取 4 字节；
+        /// - S7 多字节为大端序，因此使用 `ReadInt32LittleEndian`。
+        /// </remarks>
+        public async ValueTask<int?> ReadInt16Async(PlcInt32Address address, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return null;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，读取 Int16 被忽略");
+                return null;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，读取 Int16 被忽略");
+                return null;
+            }
+
+            if (!ReflectionAccessor.TryExtractInt32Address(address, out var area, out var dbNumber, out var startByteAdr)) {
+                RaiseFaulted("读取 Int16 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return null;
+            }
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.ReadTimeoutMs > 0) {
+                    readCts.CancelAfter(TimeSpan.FromMilliseconds(opt.ReadTimeoutMs));
+                }
+
+                var bytes = await plc.ReadBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        count: 2,
+                        readCts.Token)
+                    .ConfigureAwait(false);
+
+                if (bytes.Length < 2) {
+                    return null;
+                }
+
+                // S7 多字节按大端序
+                return BinaryPrimitives.ReadInt16BigEndian(bytes.AsSpan(0, 2));
+            }
+            catch (Exception ex) {
+                MarkDisconnected("读取 Int16 异常");
+                RaiseFaulted("读取 Int16 异常", ex);
                 return null;
             }
             finally {
@@ -894,6 +957,453 @@ namespace ZakYip.PlcBridge.Drivers {
             catch (Exception ex) {
                 MarkDisconnected("写 DB Bool 异常");
                 RaiseFaulted("写 DB Bool 异常", ex);
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        public async ValueTask<byte?> ReadByteAsync(PlcByteAddress address, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return null;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，读取 Byte 被忽略");
+                return null;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，读取 Byte 被忽略");
+                return null;
+            }
+
+            static bool TryExtractByteAddressCompat(PlcByteAddress addr, out DataType area, out int dbNumber, out int startByteAdr) {
+                var boxed = (object)addr;
+                var t = boxed.GetType();
+
+                area = DataType.DataBlock;
+                dbNumber = 1;
+                startByteAdr = 0;
+
+                static bool TryGetObject(object target, Type type, string[] names, out object? value) {
+                    foreach (var name in names) {
+                        var pi = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                        if (pi is not null) {
+                            value = pi.GetValue(target);
+                            return true;
+                        }
+
+                        var fi = type.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+                        if (fi is not null) {
+                            value = fi.GetValue(target);
+                            return true;
+                        }
+                    }
+
+                    value = null;
+                    return false;
+                }
+
+                static bool TryGetInt(object target, Type type, string[] names, out int value) {
+                    if (!TryGetObject(target, type, names, out var obj) || obj is null) {
+                        value = default;
+                        return false;
+                    }
+
+                    try {
+                        value = obj switch {
+                            int i => i,
+                            short s => s,
+                            byte b => b,
+                            long l => checked((int)l),
+                            uint u => checked((int)u),
+                            ushort us => us,
+                            sbyte sb => sb,
+                            string str when int.TryParse(str, out var v) => v,
+                            _ => Convert.ToInt32(obj)
+                        };
+                        return true;
+                    }
+                    catch {
+                        value = default;
+                        return false;
+                    }
+                }
+
+                static DataType MapArea(object obj) {
+                    if (obj is DataType dt) {
+                        return dt;
+                    }
+
+                    if (obj is string s) {
+                        var key = s.Trim().ToUpperInvariant();
+                        return key switch {
+                            "DB" or "DATABLOCK" or "DATA_BLOCK" => DataType.DataBlock,
+                            "I" or "INPUT" or "INPUTS" => DataType.Input,
+                            "Q" or "O" or "OUTPUT" or "OUTPUTS" => DataType.Output,
+                            "M" or "MERKER" or "MEMORY" => DataType.Memory,
+                            "T" or "TIMER" => DataType.Timer,
+                            "C" or "COUNTER" => DataType.Counter,
+                            _ => DataType.DataBlock
+                        };
+                    }
+
+                    return DataType.DataBlock;
+                }
+
+                static bool TryParseAddressString(string addressString, out DataType parsedArea, out int parsedDb, out int parsedStartByte) {
+                    parsedArea = DataType.DataBlock;
+                    parsedDb = 1;
+                    parsedStartByte = 0;
+
+                    var s = addressString.Trim();
+                    if (s.Length == 0) {
+                        return false;
+                    }
+
+                    // DB1.DBB10 / DB1.DBX10.1 / DB1.DBD10 / DB1.DBW10
+                    if (s.StartsWith("DB", StringComparison.OrdinalIgnoreCase)) {
+                        var i = 2;
+                        var dbStart = i;
+                        while (i < s.Length && char.IsDigit(s[i])) i++;
+                        if (i == dbStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(dbStart, i - dbStart), out parsedDb)) return false;
+
+                        while (i < s.Length && (s[i] == ' ')) i++;
+                        if (i >= s.Length || s[i] != '.') return false;
+                        i++; // skip '.'
+
+                        while (i < s.Length && s[i] == ' ') i++;
+
+                        if ((i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBX", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBB", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBW", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBD", StringComparison.OrdinalIgnoreCase))) {
+                            i += 3;
+                        }
+                        else {
+                            return false;
+                        }
+
+                        var byteStart = i;
+                        while (i < s.Length && char.IsDigit(s[i])) i++;
+                        if (i == byteStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(byteStart, i - byteStart), out parsedStartByte)) return false;
+
+                        parsedArea = DataType.DataBlock;
+                        return parsedStartByte >= 0;
+                    }
+
+                    // IB10 / QB10 / MB10 / I10 / Q10 / M10（按字节地址处理）
+                    var head = char.ToUpperInvariant(s[0]);
+                    if (head is 'I' or 'Q' or 'M') {
+                        var idx = 1;
+                        if (idx < s.Length && (s[idx] == 'B' || s[idx] == 'b')) {
+                            idx++;
+                        }
+
+                        while (idx < s.Length && s[idx] == ' ') idx++;
+
+                        var numStart = idx;
+                        while (idx < s.Length && char.IsDigit(s[idx])) idx++;
+                        if (idx == numStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(numStart, idx - numStart), out parsedStartByte)) return false;
+
+                        parsedArea = head switch {
+                            'I' => DataType.Input,
+                            'Q' => DataType.Output,
+                            'M' => DataType.Memory,
+                            _ => DataType.DataBlock
+                        };
+                        parsedDb = 0;
+                        return parsedStartByte >= 0;
+                    }
+
+                    return false;
+                }
+
+                if (TryGetObject(boxed, t, ["DataType", "Area", "MemoryArea"], out var areaObj) && areaObj is not null) {
+                    area = MapArea(areaObj);
+                }
+
+                if (TryGetInt(boxed, t, ["DbNumber", "Db", "DB"], out var db)) {
+                    dbNumber = db;
+                }
+
+                if (TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress", "ByteOffset"], out startByteAdr)) {
+                    // ok
+                }
+                else if (TryGetObject(boxed, t, ["Address"], out var addrObj) && addrObj is string addrStr) {
+                    if (!TryParseAddressString(addrStr, out area, out dbNumber, out startByteAdr)) {
+                        return false;
+                    }
+                }
+                else {
+                    return false;
+                }
+
+                if (area != DataType.DataBlock) {
+                    dbNumber = 0;
+                }
+
+                return startByteAdr >= 0;
+            }
+
+            if (!TryExtractByteAddressCompat(address, out var area, out var dbNumber, out var startByteAdr)) {
+                RaiseFaulted("读取 Byte 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return null;
+            }
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.ReadTimeoutMs > 0) {
+                    readCts.CancelAfter(TimeSpan.FromMilliseconds(opt.ReadTimeoutMs));
+                }
+
+                var bytes = await plc.ReadBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        count: 1,
+                        readCts.Token)
+                    .ConfigureAwait(false);
+
+                return bytes.Length > 0 ? bytes[0] : null;
+            }
+            catch (Exception ex) {
+                MarkDisconnected("读取 Byte 异常");
+                RaiseFaulted("读取 Byte 异常", ex);
+                return null;
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        public async ValueTask WriteByteAsync(PlcByteAddress address, byte value, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，写 Byte 被忽略");
+                return;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，写 Byte 被忽略");
+                return;
+            }
+
+            static bool TryExtractByteAddressCompat(PlcByteAddress addr, out DataType area, out int dbNumber, out int startByteAdr) {
+                var boxed = (object)addr;
+                var t = boxed.GetType();
+
+                area = DataType.DataBlock;
+                dbNumber = 1;
+                startByteAdr = 0;
+
+                static bool TryGetObject(object target, Type type, string[] names, out object? value) {
+                    foreach (var name in names) {
+                        var pi = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                        if (pi is not null) {
+                            value = pi.GetValue(target);
+                            return true;
+                        }
+
+                        var fi = type.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+                        if (fi is not null) {
+                            value = fi.GetValue(target);
+                            return true;
+                        }
+                    }
+
+                    value = null;
+                    return false;
+                }
+
+                static bool TryGetInt(object target, Type type, string[] names, out int value) {
+                    if (!TryGetObject(target, type, names, out var obj) || obj is null) {
+                        value = default;
+                        return false;
+                    }
+
+                    try {
+                        value = obj switch {
+                            int i => i,
+                            short s => s,
+                            byte b => b,
+                            long l => checked((int)l),
+                            uint u => checked((int)u),
+                            ushort us => us,
+                            sbyte sb => sb,
+                            string str when int.TryParse(str, out var v) => v,
+                            _ => Convert.ToInt32(obj)
+                        };
+                        return true;
+                    }
+                    catch {
+                        value = default;
+                        return false;
+                    }
+                }
+
+                static DataType MapArea(object obj) {
+                    if (obj is DataType dt) {
+                        return dt;
+                    }
+
+                    if (obj is string s) {
+                        var key = s.Trim().ToUpperInvariant();
+                        return key switch {
+                            "DB" or "DATABLOCK" or "DATA_BLOCK" => DataType.DataBlock,
+                            "I" or "INPUT" or "INPUTS" => DataType.Input,
+                            "Q" or "O" or "OUTPUT" or "OUTPUTS" => DataType.Output,
+                            "M" or "MERKER" or "MEMORY" => DataType.Memory,
+                            "T" or "TIMER" => DataType.Timer,
+                            "C" or "COUNTER" => DataType.Counter,
+                            _ => DataType.DataBlock
+                        };
+                    }
+
+                    return DataType.DataBlock;
+                }
+
+                static bool TryParseAddressString(string addressString, out DataType parsedArea, out int parsedDb, out int parsedStartByte) {
+                    parsedArea = DataType.DataBlock;
+                    parsedDb = 1;
+                    parsedStartByte = 0;
+
+                    var s = addressString.Trim();
+                    if (s.Length == 0) {
+                        return false;
+                    }
+
+                    if (s.StartsWith("DB", StringComparison.OrdinalIgnoreCase)) {
+                        var i = 2;
+                        var dbStart = i;
+                        while (i < s.Length && char.IsDigit(s[i])) i++;
+                        if (i == dbStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(dbStart, i - dbStart), out parsedDb)) return false;
+
+                        while (i < s.Length && (s[i] == ' ')) i++;
+                        if (i >= s.Length || s[i] != '.') return false;
+                        i++;
+
+                        while (i < s.Length && s[i] == ' ') i++;
+
+                        if ((i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBX", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBB", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBW", StringComparison.OrdinalIgnoreCase)) ||
+                            (i + 3 <= s.Length && s.AsSpan(i, 3).Equals("DBD", StringComparison.OrdinalIgnoreCase))) {
+                            i += 3;
+                        }
+                        else {
+                            return false;
+                        }
+
+                        var byteStart = i;
+                        while (i < s.Length && char.IsDigit(s[i])) i++;
+                        if (i == byteStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(byteStart, i - byteStart), out parsedStartByte)) return false;
+
+                        parsedArea = DataType.DataBlock;
+                        return parsedStartByte >= 0;
+                    }
+
+                    var head = char.ToUpperInvariant(s[0]);
+                    if (head is 'I' or 'Q' or 'M') {
+                        var idx = 1;
+                        if (idx < s.Length && (s[idx] == 'B' || s[idx] == 'b')) {
+                            idx++;
+                        }
+
+                        while (idx < s.Length && s[idx] == ' ') idx++;
+
+                        var numStart = idx;
+                        while (idx < s.Length && char.IsDigit(s[idx])) idx++;
+                        if (idx == numStart) return false;
+
+                        if (!int.TryParse(s.AsSpan(numStart, idx - numStart), out parsedStartByte)) return false;
+
+                        parsedArea = head switch {
+                            'I' => DataType.Input,
+                            'Q' => DataType.Output,
+                            'M' => DataType.Memory,
+                            _ => DataType.DataBlock
+                        };
+                        parsedDb = 0;
+                        return parsedStartByte >= 0;
+                    }
+
+                    return false;
+                }
+
+                if (TryGetObject(boxed, t, ["DataType", "Area", "MemoryArea"], out var areaObj) && areaObj is not null) {
+                    area = MapArea(areaObj);
+                }
+
+                if (TryGetInt(boxed, t, ["DbNumber", "Db", "DB"], out var db)) {
+                    dbNumber = db;
+                }
+
+                if (TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress", "ByteOffset"], out startByteAdr)) {
+                    // ok
+                }
+                else if (TryGetObject(boxed, t, ["Address"], out var addrObj) && addrObj is string addrStr) {
+                    if (!TryParseAddressString(addrStr, out area, out dbNumber, out startByteAdr)) {
+                        return false;
+                    }
+                }
+                else {
+                    return false;
+                }
+
+                if (area != DataType.DataBlock) {
+                    dbNumber = 0;
+                }
+
+                return startByteAdr >= 0;
+            }
+
+            if (!TryExtractByteAddressCompat(address, out var area, out var dbNumber, out var startByteAdr)) {
+                RaiseFaulted("写 Byte 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return;
+            }
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.WriteTimeoutMs > 0) {
+                    writeCts.CancelAfter(TimeSpan.FromMilliseconds(opt.WriteTimeoutMs));
+                }
+
+                byte[] buffer = [value];
+
+                await plc.WriteBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        value: buffer,
+                        writeCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                MarkDisconnected("写 Byte 异常");
+                RaiseFaulted("写 Byte 异常", ex);
             }
             finally {
                 _requestGate.Release();
@@ -1768,7 +2278,7 @@ namespace ZakYip.PlcBridge.Drivers {
                     return false;        // 关键：缺 DB 编号直接失败，避免误读 DB1
                 }
 
-                return TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress"], out startByteAdr);
+                return TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress", "ByteOffset"], out startByteAdr);
             }
 
             /// <summary>
@@ -1798,7 +2308,7 @@ namespace ZakYip.PlcBridge.Drivers {
                     dbNumber = db;
                 }
 
-                if (TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress"], out startByteAdr)) {
+                if (TryGetInt(boxed, t, ["StartByteAdr", "ByteIndex", "Offset", "ByteAdr", "ByteAddress", "ByteOffset"], out startByteAdr)) {
                     // ok
                 }
                 else if (TryGetObject(boxed, t, ["Address"], out var addrObj) && addrObj is string addr) {

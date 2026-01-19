@@ -81,7 +81,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = itemCodeOptions.ByteOffset,
-                            Kind = PlcStringKind.SiemensString,
+                            Kind = PlcStringKind.FixedAscii,
                             MaxLength = itemCodeOptions.MaxStringLength ?? 0
                         });
                     }
@@ -97,7 +97,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = batchNoOptions.ByteOffset,
-                            Kind = PlcStringKind.SiemensString,
+                            Kind = PlcStringKind.FixedAscii,
                             MaxLength = batchNoOptions.MaxStringLength ?? 0
                         });
                     }
@@ -108,7 +108,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     var boxQuantityOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
                         f.Role == ElevatorHandshakeFieldRole.BoxQuantity);
                     if (boxQuantityOptions is not null) {
-                        boxQuantity = await _plcManager.ReadInt32Async(new PlcInt32Address {
+                        boxQuantity = await _plcManager.ReadInt16Async(new PlcInt32Address {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = boxQuantityOptions.ByteOffset
@@ -121,7 +121,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     var callElevatorLayerOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
                         f.Role == ElevatorHandshakeFieldRole.CallElevatorLayer);
                     if (callElevatorLayerOptions is not null) {
-                        callElevatorLayer = await _plcManager.ReadInt32Async(new PlcInt32Address {
+                        callElevatorLayer = await _plcManager.ReadInt16Async(new PlcInt32Address {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = callElevatorLayerOptions.ByteOffset
@@ -134,7 +134,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     var callElevatorUseLayerOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
                         f.Role == ElevatorHandshakeFieldRole.CallElevatorUseLayer);
                     if (callElevatorUseLayerOptions is not null) {
-                        callElevatorUseLayer = await _plcManager.ReadInt32Async(new PlcInt32Address {
+                        callElevatorUseLayer = await _plcManager.ReadInt16Async(new PlcInt32Address {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = callElevatorUseLayerOptions.ByteOffset
@@ -151,7 +151,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = uniqueGuidOptions.ByteOffset,
-                            Kind = PlcStringKind.SiemensString,
+                            Kind = PlcStringKind.FixedAscii,
                             MaxLength = uniqueGuidOptions.MaxStringLength ?? 0
                         });
                     }
@@ -161,6 +161,22 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
                     //测试输出
                     _logger.LogInformation($"物料编号: {itemCode}, 批次: {batchNo}, 箱子数量: {boxQuantity}, 叫电梯楼层: {callElevatorLayer}, 叫电梯使用层数: {callElevatorUseLayer}, 唯一值Guid: {uniqueGuid}");
+                    //更改电梯到位信号为高
+                    var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                        f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
+                    if (elevatorArrivedSignalOptions is not null) {
+                        await _plcManager.WriteDbBoolsAsync(new List<PlcDbBoolWriteItem>()
+                        {
+                            new PlcDbBoolWriteItem
+                            {
+                                DbNumber = _options.CurrentValue.DbNumber,
+                                ByteOffset = elevatorArrivedSignalOptions.ByteOffset,
+                                BitOffset = elevatorArrivedSignalOptions.BitOffset??0,
+                                State = PlcIoSignalState.High
+                            }
+                        });
+                        _logger.LogInformation($"更改电梯到位信号为高");
+                    }
                 }
                 //进料完成信号InfeedDoneSignal
                 var hasInfeedDoneSignal = changes.Any(a => a.ByteOffset == _infeedDoneSignalByteOffset &&
@@ -178,7 +194,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = uniqueGuidOptions.ByteOffset,
-                            Kind = PlcStringKind.SiemensString,
+                            Kind = PlcStringKind.FixedAscii,
                             MaxLength = uniqueGuidOptions.MaxStringLength ?? 0
                         });
                     }
@@ -193,7 +209,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             Area = PlcDataArea.Db,
                             DbNumber = _options.CurrentValue.DbNumber,
                             ByteOffset = isSuccessOptions.ByteOffset,
-                            Kind = PlcStringKind.SiemensString,
+                            Kind = PlcStringKind.FixedAscii,
                             MaxLength = isSuccessOptions.MaxStringLength ?? 0
                         });
                     }
@@ -202,6 +218,22 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     }
                     //测试输出
                     _logger.LogInformation($"进料完成信号-唯一值Guid: {uniqueGuid}, 执行完成状态: {isSuccess}");
+                    //更改电梯到位信号为低
+                    var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                        f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
+                    if (elevatorArrivedSignalOptions is not null) {
+                        await _plcManager.WriteDbBoolsAsync(new List<PlcDbBoolWriteItem>()
+                         {
+                            new PlcDbBoolWriteItem
+                            {
+                                DbNumber = _options.CurrentValue.DbNumber,
+                                ByteOffset = elevatorArrivedSignalOptions.ByteOffset,
+                                BitOffset = elevatorArrivedSignalOptions.BitOffset??0,
+                                State = PlcIoSignalState.Low
+                            }
+                        });
+                        _logger.LogInformation($"更改电梯到位信号为低");
+                    }
                 }
             };
 
