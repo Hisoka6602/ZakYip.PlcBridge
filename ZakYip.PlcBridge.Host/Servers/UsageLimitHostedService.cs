@@ -70,9 +70,6 @@ namespace ZakYip.PlcBridge.Host.Servers {
                 catch (Exception ex) {
                     _logger.LogError(ex, "使用限制服务循环异常");
                 }
-                finally {
-                    await Task.Delay(1000, stoppingToken);
-                }
             }
         }
     }

@@ -17,7 +17,7 @@ namespace ZakYip.PlcBridge.Core.Options {
         /// <summary>
         /// 最大累计可用时长（毫秒）
         /// </summary>
-        public long MaxTotalRunTimeMs { get; init; } = 72L * 60 * 60 * 1000;
+        public long MaxTotalRunTimeMs { get; init; } = 168L * 60 * 60 * 1000;
 
         /// <summary>
         /// 落盘间隔（毫秒）

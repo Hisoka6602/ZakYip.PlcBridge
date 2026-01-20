@@ -78,6 +78,8 @@ try {
         builder.Configuration.GetSection("LogCleanup"));
 
     builder.Services.AddHostedService<ElevatorBridgeHostedService>();
+    builder.Services.AddHostedService<ElevatorTaskMonitorHostedService>();
+
     builder.Services.AddHostedService<UsageLimitHostedService>();
 #if !DEBUG
                 builder.Services.AddWindowsService();

@@ -37,44 +37,55 @@ namespace ZakYip.PlcBridge.Host.Servers {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             while (!stoppingToken.IsCancellationRequested) {
                 //查询状态
+                await _safeExecutor.ExecuteAsync(async () => {
+                    if (string.IsNullOrEmpty(_elevatorApiClient.ErpGuid)) {
+                        return;
+                    }
+                    ElevatorApiResult elevatorApiResult;
+                    try {
+                        elevatorApiResult = await _elevatorApiClient.QueryTaskAsync(new ElevatorTaskQueryRequest {
+                            ErpGuid = _elevatorApiClient.ErpGuid,
+                            Status = 2
+                        }, stoppingToken);
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
+                        return;
+                    }
+                    if (!elevatorApiResult.IsSuccess || string.IsNullOrEmpty(elevatorApiResult.ResponsePayload)) {
+                        return;
+                    }
 
-                if (!string.IsNullOrEmpty(_elevatorApiClient.ErpGuid)) {
-                    var elevatorApiResult = await _elevatorApiClient.QueryTaskAsync(new ElevatorTaskQueryRequest {
-                        ErpGuid = _elevatorApiClient.ErpGuid,
-                        Status = 2
-                    }, stoppingToken);
-
-                    if (elevatorApiResult.IsSuccess && !string.IsNullOrEmpty(elevatorApiResult.ResponsePayload)) {
-                        try {
-                            var envelopeDto = JsonConvert.DeserializeObject<ElevatorApiEnvelopeDto<ElevatorTaskQueryRequest>>(
-                                elevatorApiResult.ResponsePayload);
-                            if (envelopeDto?.ResData?.Status == 2) {
-                                //电梯到位
-                                var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
-    f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
-                                if (elevatorArrivedSignalOptions is not null) {
-                                    await _plcManager.WriteDbBoolsAsync(new List<PlcDbBoolWriteItem>()
+                    try {
+                        var envelopeDto = JsonConvert.DeserializeObject<ElevatorApiEnvelopeDto<ElevatorTaskResDataDto>>(
+                            elevatorApiResult.ResponsePayload);
+                        var statusText = envelopeDto?.ResData?.Status;
+                        if (int.TryParse(statusText, out var status) && status == 2) {
+                            //电梯到位
+                            var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                                f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
+                            if (elevatorArrivedSignalOptions is not null) {
+                                var writeItems = new List<PlcDbBoolWriteItem>
+                                {
+                                    new()
                                     {
-         new()
-         {
-             DbNumber = _options.CurrentValue.DbNumber,
-             ByteOffset = elevatorArrivedSignalOptions.ByteOffset,
-             BitOffset = elevatorArrivedSignalOptions.BitOffset??0,
-             State = PlcIoSignalState.High
-         }
-     }, stoppingToken);
-                                    _logger.LogInformation($"更改电梯到位信号为高");
-                                }
+                                        DbNumber = _options.CurrentValue.DbNumber,
+                                        ByteOffset = elevatorArrivedSignalOptions.ByteOffset,
+                                        BitOffset = elevatorArrivedSignalOptions.BitOffset ?? 0,
+                                        State = PlcIoSignalState.High
+                                    }
+                                };
+                                await _plcManager.WriteDbBoolsAsync(writeItems, stoppingToken);
+                                _logger.LogInformation($"更改电梯到位信号为高");
                             }
                         }
-                        catch (Exception e) {
-                            _logger.LogError($"电梯接口响应数据解析异常:{e}");
-                        }
                     }
-                }
-
-                await Task.Delay(1000, stoppingToken);
+                    catch (Exception e) {
+                        _logger.LogError($"电梯接口响应数据解析异常:{e}");
+                    }
+                }, "电梯任务查询监控");
             }
+
+            await Task.Delay(1000, stoppingToken);
         }
     }
 }
