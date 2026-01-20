@@ -1,11 +1,16 @@
 using NLog;
+using ZakYip.PlcBridge.Core;
 using ZakYip.PlcBridge.Host;
 using NLog.Extensions.Logging;
 using ZakYip.PlcBridge.Drivers;
+using Microsoft.Extensions.Options;
 using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Options;
 using ZakYip.PlcBridge.Host.Servers;
 using ZakYip.PlcBridge.Core.Utilities;
+using ZakYip.PlcBridge.Execution.Store;
+using ZakYip.PlcBridge.Execution.Security;
+using ZakYip.PlcBridge.Core.Models.Security;
 
 // 尽早配置NLog
 var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
@@ -44,7 +49,8 @@ try {
     builder.Services.AddOptions<ElevatorHandshakeDbOptions>()
         .Bind(builder.Configuration.GetSection("ElevatorHandshakeDb"))
         .ValidateOnStart();
-
+    builder.Services.AddSingleton<IOptionsMonitor<UsageLimitOptions>>(
+        _ => new StaticOptionsMonitor<UsageLimitOptions>(new UsageLimitOptions()));
     //组件注册
 
     // SafeExecutor：ElevatorBridgeHostedService 构造参数依赖 :contentReference[oaicite:5]{index=5}
@@ -52,11 +58,22 @@ try {
 
     // IPlcManager -> S7PlcManager（单连接、含监控循环，建议单例）
     builder.Services.AddSingleton<IPlcManager, S7PlcManager>();
+
+    builder.Services.AddSingleton<IStateProtector, DpapiStateProtector>();
+    builder.Services.AddSingleton<FileUsageStateStore>();
+    builder.Services.AddSingleton<RegistryUsageStateStore>();
+    builder.Services.AddSingleton<IUsageStateStore>(sp => new CompositeUsageStateStore(
+        sp.GetRequiredService<ILogger<CompositeUsageStateStore>>(),
+        sp.GetRequiredService<FileUsageStateStore>(),
+        sp.GetRequiredService<RegistryUsageStateStore>()));
+
+    builder.Services.AddSingleton<IUsageLimitGuard, UsageLimitGuard>();
     //服务注册
     builder.Services.Configure<LogCleanupSettings>(
         builder.Configuration.GetSection("LogCleanup"));
 
     builder.Services.AddHostedService<ElevatorBridgeHostedService>();
+    builder.Services.AddHostedService<UsageLimitHostedService>();
 #if !DEBUG
                 builder.Services.AddWindowsService();
 #endif
