@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ZakYip.PlcBridge.Core\ZakYip.PlcBridge.Core.csproj" />
+  </ItemGroup>
+
 </Project>

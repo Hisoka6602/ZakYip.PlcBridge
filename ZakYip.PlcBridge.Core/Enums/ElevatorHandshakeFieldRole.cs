@@ -67,9 +67,15 @@ namespace ZakYip.PlcBridge.Core.Enums {
         UniqueGuid = 9,
 
         /// <summary>
-        /// 是否成功（PLC 侧可能用 Bool 或 String 表达）
+        /// 呼叫电梯失败信号
         /// </summary>
-        [Description("是否成功")]
-        IsSuccess = 10,
+        [Description("呼叫电梯失败信号")]
+        CallElevatorFailedSignal = 10,
+
+        /// <summary>
+        /// 进料失败信号
+        /// </summary>
+        [Description("进料失败信号")]
+        InfeedFailedSignal = 11
     }
 }

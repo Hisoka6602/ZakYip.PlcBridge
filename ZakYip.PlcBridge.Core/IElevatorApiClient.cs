@@ -14,6 +14,11 @@ namespace ZakYip.PlcBridge.Core {
     public interface IElevatorApiClient : IAsyncDisposable {
 
         /// <summary>
+        /// 当前ErpGuid
+        /// </summary>
+        public string ErpGuid { get; }
+
+        /// <summary>
         /// 异常事件（用于隔离异常，不影响上层调用链）
         /// </summary>
         event EventHandler<ElevatorApiFaultedEventArgs>? Faulted;
@@ -35,7 +40,7 @@ namespace ZakYip.PlcBridge.Core {
         /// <summary>
         /// 电梯任务查询
         /// </summary>
-        ValueTask<ElevatorTaskQueryResult> QueryTaskAsync(
+        ValueTask<ElevatorApiResult> QueryTaskAsync(
             ElevatorTaskQueryRequest request,
             CancellationToken cancellationToken = default);
     }

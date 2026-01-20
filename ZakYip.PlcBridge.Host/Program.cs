@@ -3,6 +3,7 @@ using ZakYip.PlcBridge.Core;
 using ZakYip.PlcBridge.Host;
 using NLog.Extensions.Logging;
 using ZakYip.PlcBridge.Drivers;
+using ZakYip.PlcBridge.Ingress;
 using Microsoft.Extensions.Options;
 using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Options;
@@ -58,6 +59,10 @@ try {
 
     // IPlcManager -> S7PlcManager（单连接、含监控循环，建议单例）
     builder.Services.AddSingleton<IPlcManager, S7PlcManager>();
+    builder.Services.AddHttpClient<IElevatorApiClient, HttpElevatorApiClient>(c => {
+        c.BaseAddress = new Uri("http://172.16.4.108:8800");
+        c.Timeout = TimeSpan.FromMilliseconds(1500);
+    });
 
     builder.Services.AddSingleton<IStateProtector, DpapiStateProtector>();
     builder.Services.AddSingleton<FileUsageStateStore>();
