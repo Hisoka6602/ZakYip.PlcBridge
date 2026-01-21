@@ -38,17 +38,18 @@ namespace ZakYip.PlcBridge.Host.Servers {
             while (!stoppingToken.IsCancellationRequested) {
                 //查询状态
                 await _safeExecutor.ExecuteAsync(async () => {
-                    if (string.IsNullOrEmpty(_elevatorApiClient.ErpGuid)) {
+                    if (string.IsNullOrEmpty(ElevatorRuntimeState.ErpGuid)) {
                         return;
                     }
                     ElevatorApiResult elevatorApiResult;
                     try {
                         elevatorApiResult = await _elevatorApiClient.QueryTaskAsync(new ElevatorTaskQueryRequest {
-                            ErpGuid = _elevatorApiClient.ErpGuid,
+                            ErpGuid = ElevatorRuntimeState.ErpGuid,
                             Status = 2
                         }, stoppingToken);
                     }
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
+                        _logger.LogError($"电梯接口响应超时");
                         return;
                     }
                     if (!elevatorApiResult.IsSuccess || string.IsNullOrEmpty(elevatorApiResult.ResponsePayload)) {
@@ -76,6 +77,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 };
                                 await _plcManager.WriteDbBoolsAsync(writeItems, stoppingToken);
                                 _logger.LogInformation($"更改电梯到位信号为高");
+                                ElevatorRuntimeState.ClearErpGuid();
                             }
                         }
                     }
@@ -83,9 +85,10 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         _logger.LogError($"电梯接口响应数据解析异常:{e}");
                     }
                 }, "电梯任务查询监控");
+                await Task.Delay(1000, stoppingToken);
             }
 
-            await Task.Delay(1000, stoppingToken);
+            Console.WriteLine("跳出循环");
         }
     }
 }

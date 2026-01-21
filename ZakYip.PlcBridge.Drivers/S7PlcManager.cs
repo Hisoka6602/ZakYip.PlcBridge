@@ -1411,6 +1411,89 @@ namespace ZakYip.PlcBridge.Drivers {
         }
 
         /// <summary>
+        /// 写入一个 S7 STRING 字符串（失败时静默返回；异常通过 Faulted 上报）。
+        /// </summary>
+        /// <remarks>
+        /// S7 STRING：2字节头 + ASCII 内容。
+        /// - 第0字节：最大长度（maxLen）
+        /// - 第1字节：当前长度（len）
+        /// - 后续：ASCII 内容，不足部分补 0
+        /// </remarks>
+        public async ValueTask WriteStringAsync(PlcStringAddress address, string value, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，写 String 被忽略");
+                return;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，写 String 被忽略");
+                return;
+            }
+
+            if (!ReflectionAccessor.TryExtractStringAddress(address, out var area, out var dbNumber, out var startByteAdr, out var maxLen)) {
+                RaiseFaulted("写 String 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return;
+            }
+
+            if (maxLen <= 0) {
+                maxLen = 254;
+            }
+
+            if (maxLen > 1024) {
+                RaiseFaulted("写 String 最大长度过大，已拒绝", new ArgumentOutOfRangeException(nameof(maxLen)));
+                return;
+            }
+
+            value ??= string.Empty;
+
+            // 先构造写入缓冲区，减少占用 _requestGate 的时间
+            var src = value.AsSpan();
+            if (src.Length > maxLen) {
+                _logger.LogWarning("写 String 内容过长，已截断: MaxLen={MaxLen}, ActualLen={ActualLen}", maxLen, src.Length);
+                src = src.Slice(0, maxLen);
+            }
+
+            var count = checked(maxLen + 2);
+            var buffer = new byte[count];
+
+            buffer[0] = (byte)maxLen;
+
+            // ASCII 写入：非 ASCII 字符按 Encoding.ASCII 规则替换
+            var bytesWritten = Encoding.ASCII.GetBytes(src, buffer.AsSpan(2, maxLen));
+            buffer[1] = (byte)bytesWritten;
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.WriteTimeoutMs > 0) {
+                    writeCts.CancelAfter(TimeSpan.FromMilliseconds(opt.WriteTimeoutMs));
+                }
+
+                await plc.WriteBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        value: buffer,
+                        writeCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                MarkDisconnected("写 String 异常");
+                RaiseFaulted("写 String 异常", ex);
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        /// <summary>
         /// 释放资源：停止监控、关闭 PLC 连接、取消配置订阅，并释放信号量。
         /// </summary>
         /// <remarks>

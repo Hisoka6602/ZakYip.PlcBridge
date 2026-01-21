@@ -14,11 +14,6 @@ namespace ZakYip.PlcBridge.Core {
     public interface IElevatorApiClient : IAsyncDisposable {
 
         /// <summary>
-        /// 当前ErpGuid
-        /// </summary>
-        public string ErpGuid { get; }
-
-        /// <summary>
         /// 异常事件（用于隔离异常，不影响上层调用链）
         /// </summary>
         event EventHandler<ElevatorApiFaultedEventArgs>? Faulted;

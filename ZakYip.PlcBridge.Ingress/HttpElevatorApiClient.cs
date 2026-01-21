@@ -12,6 +12,7 @@ using ZakYip.PlcBridge.Core.Enums;
 using Microsoft.Extensions.Logging;
 using ZakYip.PlcBridge.Core.Events;
 using System.Text.Json.Serialization;
+using ZakYip.PlcBridge.Core.Utilities;
 using ZakYip.PlcBridge.Core.Models.Elevator;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -21,7 +22,7 @@ namespace ZakYip.PlcBridge.Ingress {
     /// 基于 HttpClient 的电梯 API 客户端实现
     /// </summary>
     public sealed class HttpElevatorApiClient : IElevatorApiClient {
-        private const string CallElevatorPath = "/api/wterp/erptofulllinkdt";
+        private const string CallElevatorPath = "/api/wterp/erptofullinkdt";
         private const string ReportInfeedDonePath = "/api/wterp/erptodtStatus";
         private const string QueryTaskPath = "/api/wterp/DtStatusToErp";
 
@@ -42,8 +43,6 @@ namespace ZakYip.PlcBridge.Ingress {
                 throw new InvalidOperationException("HttpElevatorApiClient 需要配置 HttpClient.BaseAddress（示例：http://172.16.4.108:8800）");
             }
         }
-
-        public string ErpGuid { get; private set; } = string.Empty;
 
         /// <summary>
         /// 异常事件（用于隔离异常，不影响上层调用链）
@@ -82,7 +81,7 @@ namespace ZakYip.PlcBridge.Ingress {
                 Curl = snapshot.Curl
             };
             _logger.LogInformation($"呼叫电梯请求:{JsonConvert.SerializeObject(elevatorApiResult, Formatting.Indented)}");
-            ErpGuid = request.ErpGuid;
+            ElevatorRuntimeState.ErpGuid = request.ErpGuid;
             return elevatorApiResult;
         }
 
@@ -115,7 +114,7 @@ namespace ZakYip.PlcBridge.Ingress {
                 Curl = snapshot.Curl
             };
             _logger.LogInformation($"入库执行完成上报:{JsonConvert.SerializeObject(elevatorApiResult, Formatting.Indented)}");
-            ErpGuid = string.Empty;
+            ElevatorRuntimeState.ClearErpGuid();
             return elevatorApiResult;
         }
 
@@ -244,6 +243,7 @@ namespace ZakYip.PlcBridge.Ingress {
         }
 
         private ElevatorApiResult BuildApiResultFail(HttpSnapshot snapshot, ElevatorApiErrorCode code, string? message) {
+            _logger.LogInformation($"电梯接口调用失败:{JsonConvert.SerializeObject(snapshot, Formatting.Indented)}");
             return new ElevatorApiResult {
                 IsSuccess = false,
                 ErrorCode = code,
@@ -258,6 +258,8 @@ namespace ZakYip.PlcBridge.Ingress {
         }
 
         private ElevatorApiResult BuildTaskQueryResultFail(HttpSnapshot snapshot, ElevatorApiErrorCode code, string? message) {
+            _logger.LogError($"电梯任务查询失败:{JsonConvert.SerializeObject(snapshot, Formatting.Indented)}");
+
             return new ElevatorApiResult {
                 IsSuccess = false,
                 ErrorCode = code,
@@ -317,7 +319,7 @@ namespace ZakYip.PlcBridge.Ingress {
         }
 
         private static bool IsEnvelopeSuccess<TResData>(ElevatorApiEnvelopeDto<TResData> env) {
-            if (!env.IsSuccess) return false;
+            if (!env.Success) return false;
 
             var code = env.ErrCode?.Trim();
             if (string.IsNullOrWhiteSpace(code)) return true;

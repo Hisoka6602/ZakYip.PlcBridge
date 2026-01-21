@@ -135,5 +135,10 @@ namespace ZakYip.PlcBridge.Core.Manager {
             PlcByteAddress address,
             byte value,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 写入一个 S7 STRING 字符串（失败时静默返回；异常通过 Faulted 上报）。
+        /// </summary>
+        ValueTask WriteStringAsync(PlcStringAddress address, string value, CancellationToken cancellationToken = default);
     }
 }

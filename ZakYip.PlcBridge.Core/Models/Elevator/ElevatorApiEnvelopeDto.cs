@@ -32,7 +32,7 @@ namespace ZakYip.PlcBridge.Core.Models.Elevator {
         /// 是否成功
         /// </summary>
         [JsonPropertyName("Success")]
-        public bool IsSuccess { get; init; }
+        public bool Success { get; init; }
 
         /// <summary>
         /// 业务数据

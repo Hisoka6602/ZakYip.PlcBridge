@@ -61,7 +61,7 @@ try {
     builder.Services.AddSingleton<IPlcManager, S7PlcManager>();
     builder.Services.AddHttpClient<IElevatorApiClient, HttpElevatorApiClient>(c => {
         c.BaseAddress = new Uri("http://172.16.4.108:8800");
-        c.Timeout = TimeSpan.FromMilliseconds(1500);
+        c.Timeout = TimeSpan.FromMilliseconds(2500);
     });
 
     builder.Services.AddSingleton<IStateProtector, DpapiStateProtector>();

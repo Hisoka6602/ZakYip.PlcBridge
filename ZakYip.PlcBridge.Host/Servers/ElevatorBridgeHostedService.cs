@@ -75,7 +75,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         var boxQuantity = 0;
                         var callElevatorLayer = 0;
                         var callElevatorUseLayer = 0;
-                        var uniqueGuid = string.Empty;
+                        var uniqueGuid = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                         //物料编号
                         var itemCodeOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
                             f.Role == ElevatorHandshakeFieldRole.ItemCode);
@@ -146,26 +146,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         else {
                             _logger.LogError($"未配置叫电梯使用层数地址");
                         }
-                        //唯一值Guid
-                        var uniqueGuidOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
-                            f.Role == ElevatorHandshakeFieldRole.UniqueGuid);
-                        if (uniqueGuidOptions is not null) {
-                            uniqueGuid = await _plcManager.ReadStringAsync(new PlcStringAddress {
-                                Area = PlcDataArea.Db,
-                                DbNumber = _options.CurrentValue.DbNumber,
-                                ByteOffset = uniqueGuidOptions.ByteOffset,
-                                Kind = PlcStringKind.FixedAscii,
-                                MaxLength = uniqueGuidOptions.MaxStringLength ?? 0
-                            });
-                        }
-                        else {
-                            _logger.LogError($"未配置唯一值Guid地址");
-                        }
 
                         //测试输出
                         _logger.LogInformation($"物料编号: {itemCode}, 批次: {batchNo}, 箱子数量: {boxQuantity}, 叫电梯楼层: {callElevatorLayer}, 叫电梯使用层数: {callElevatorUseLayer}, 唯一值Guid: {uniqueGuid}");
                         var result = await _elevatorApiClient.CallElevatorAsync(new ElevatorCallRequest {
-                            ErpGuid = uniqueGuid ?? string.Empty,
+                            ErpGuid = uniqueGuid.ToString() ?? string.Empty,
                             ItemCode = itemCode ?? string.Empty,
                             Layer = callElevatorLayer,
                             Num = callElevatorUseLayer,
@@ -191,6 +176,22 @@ namespace ZakYip.PlcBridge.Host.Servers {
                             }
                         }
                         else {
+                            //写唯一值Guid赋值
+                            var uniqueGuidOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                                f.Role == ElevatorHandshakeFieldRole.UniqueGuid);
+                            if (uniqueGuidOptions is not null) {
+                                await _plcManager.WriteStringAsync(new PlcStringAddress {
+                                    Area = PlcDataArea.Db,
+                                    DbNumber = _options.CurrentValue.DbNumber,
+                                    ByteOffset = uniqueGuidOptions.ByteOffset,
+                                    Kind = PlcStringKind.FixedAscii,
+                                    MaxLength = uniqueGuidOptions.MaxStringLength ?? 0
+                                }, uniqueGuid.ToString());
+                            }
+                            else {
+                                _logger.LogError($"未配置唯一值Guid地址");
+                            }
+
                             var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
                                 f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
                             if (elevatorArrivedSignalOptions is not null) {
