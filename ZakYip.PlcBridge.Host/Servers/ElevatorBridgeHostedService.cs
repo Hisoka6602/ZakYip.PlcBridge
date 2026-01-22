@@ -257,6 +257,22 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems);
                             }
                         }
+                        else {
+                            var elevatorArrivedSignalOptions = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                                f.Role == ElevatorHandshakeFieldRole.ElevatorArrivedSignal);
+                            if (elevatorArrivedSignalOptions is not null) {
+                                var writeItems = new List<PlcDbBoolWriteItem> {
+                                    new() {
+                                        DbNumber = _options.CurrentValue.DbNumber,
+                                        ByteOffset = elevatorArrivedSignalOptions.ByteOffset,
+                                        BitOffset = elevatorArrivedSignalOptions.BitOffset ?? 0,
+                                        State = PlcIoSignalState.Low
+                                    }
+                                };
+                                await _plcManager.WriteDbBoolsAsync(writeItems);
+                                _logger.LogInformation($"更改电梯到位信号为低");
+                            }
+                        }
                     }
                 }, "PLC DB Bool 变化处理");
             };
