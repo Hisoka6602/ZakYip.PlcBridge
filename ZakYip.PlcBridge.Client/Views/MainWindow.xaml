@@ -1,0 +1,35 @@
+﻿<Window
+    x:Class="ZakYip.PlcBridge.Client.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:ZakYip.PlcBridge.Client"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:mvvm="http://prismlibrary.com/"
+    mvvm:ViewModelLocator.AutoWireViewModel="True"
+    Background="Transparent"
+    FontFamily="{StaticResource ChineseFontResource}"
+    ResizeMode="CanMinimize"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <WindowChrome.WindowChrome>
+        <WindowChrome
+            CaptionHeight="20"
+            CornerRadius="10"
+            GlassFrameThickness="-1"
+            NonClientFrameEdges="None"
+            ResizeBorderThickness="5"
+            UseAeroCaptionButtons="True" />
+    </WindowChrome.WindowChrome>
+    <materialDesign:Card
+        Margin="0"
+        materialDesign:ElevationAssist.Elevation="Dp2"
+        materialDesign:ShadowAssist.Darken="True"
+        Background="White"
+        UniformCornerRadius="{Binding UniformCornerRadius, UpdateSourceTrigger=PropertyChanged}">
+
+        <Grid />
+    </materialDesign:Card>
+</Window>

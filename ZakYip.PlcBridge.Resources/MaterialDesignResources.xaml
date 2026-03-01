@@ -1,0 +1,232 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:mathConverters1="clr-namespace:ZakYip.PlcBridge.Resources.Converters.MathConverters"
+    xmlns:system="clr-namespace:System;assembly=System.Runtime"
+    xmlns:wpf="clr-namespace:LottieSharp.WPF;assembly=LottieSharp">
+    <SolidColorBrush x:Key="ScrollBarForeground" Color="#b2b2b2" />
+    <Style x:Key="ScrollThumbs" TargetType="{x:Type Thumb}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Thumb}">
+                    <Grid x:Name="Grid">
+                        <Rectangle
+                            Width="Auto"
+                            Height="Auto"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Fill="Transparent" />
+                        <Border
+                            x:Name="ScrollBarRectangle"
+                            Width="Auto"
+                            Height="Auto"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="True" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="Horizontal">
+                            <Setter TargetName="ScrollBarRectangle" Property="Width" Value="Auto" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ScrollBarRectangle" Property="Background" Value="{StaticResource ScrollBarForeground}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type ScrollBar}">
+        <Setter Property="Margin" Value="0,2,-3,2" />
+        <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
+        <Setter Property="Foreground" Value="{StaticResource ScrollBarForeground}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Grid
+                        x:Name="GridRoot"
+                        Width="8"
+                        Background="{TemplateBinding Background}">
+                        <Track
+                            x:Name="PART_Track"
+                            Focusable="false"
+                            IsDirectionReversed="true">
+                            <Track.Thumb>
+                                <Thumb
+                                    x:Name="ScrollBarThumb"
+                                    Background="{TemplateBinding Foreground}"
+                                    Style="{StaticResource ScrollThumbs}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton
+                                    x:Name="PageUp"
+                                    Command="ScrollBar.PageDownCommand"
+                                    Focusable="false"
+                                    Opacity="0" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton
+                                    x:Name="PageDown"
+                                    Command="ScrollBar.PageUpCommand"
+                                    Focusable="false"
+                                    Opacity="0" />
+                            </Track.DecreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseDirectlyOver" Value="True" />
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ScrollBarThumb" Property="Background" Value="{StaticResource ScrollBarForeground}" />
+                            <Setter TargetName="ScrollBarThumb" Property="Opacity" Value=".8" />
+                        </Trigger>
+                        <Trigger Property="Orientation" Value="Horizontal">
+                            <Setter TargetName="GridRoot" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-90" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="PART_Track" Property="LayoutTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-90" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Width" Value="Auto" />
+                            <Setter Property="Height" Value="10" />
+                            <Setter TargetName="ScrollBarThumb" Property="Tag" Value="Horizontal" />
+                            <Setter TargetName="PageDown" Property="Command" Value="ScrollBar.PageLeftCommand" />
+                            <Setter TargetName="PageUp" Property="Command" Value="ScrollBar.PageRightCommand" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="{x:Type Button}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    </Style>
+    <!--  全局字体定义(跨文件使用需要加上类名)  -->
+    <FontFamily x:Key="ChineseFontResource">
+        pack://application:,,,/ZakYip.PlcBridge.Resources;component/Fonts/#FiraCode-Bold
+    </FontFamily>
+    <FontFamily x:Key="EnglishAndNumericFontResource">
+        pack://application:,,,/ZakYip.PlcBridge.Resources;component/Fonts/#更纱黑体 Mono SC Nerd
+    </FontFamily>
+    <!--<FontFamily x:Key="IconFontFamily">
+        pack://application:,,,/ZakYip.PlcBridge.Resources;component/Fonts/#iconfont
+    </FontFamily>-->
+    <!--  全局图片定义  -->
+    <!--~1~  空数据图  @1@
+    <BitmapImage
+        x:Key="NullDataImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/NullData.png" />
+    ~1~  图片加载失败  @1@
+    <BitmapImage
+        x:Key="ImageLoadFailedImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/ImageLoadFailed.png" />
+    ~1~  加载中  @1@
+    <BitmapImage
+        x:Key="LoadingImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/Loading.png" />
+    ~1~  修复中  @1@
+    <BitmapImage
+        x:Key="RepairingImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/Repairing.png" />
+
+    ~1~  服务器异常  @1@
+    <BitmapImage
+        x:Key="ServerExceptionImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/ServerException.png" />
+    ~1~  网络异常  @1@
+    <BitmapImage
+        x:Key="NetworkExceptionImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/NetworkException.png" />
+    ~1~  无授权信息  @1@
+    <BitmapImage
+        x:Key="NoAuthorizationImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/NoAuthorization.png" />
+    ~1~  暂无视频  @1@
+    <BitmapImage
+        x:Key="NoVideoImage"
+        DecodePixelHeight="300"
+        DecodePixelWidth="300"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/NoVideoImage.png" />
+    ~1~  标题Logo  @1@
+    <BitmapImage
+        x:Key="TitleIcon"
+        DecodePixelHeight="50"
+        DecodePixelWidth="140"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/BgSub_TitleIcon.png" />
+    <BitmapImage
+        x:Key="TitleLogo"
+        DecodePixelHeight="50"
+        DecodePixelWidth="140"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/LOGO.png" />
+    <BitmapImage
+        x:Key="HomeDefaultImage"
+        DecodePixelHeight="500"
+        DecodePixelWidth="500"
+        UriSource="pack://application:,,,/ZakYip.PlcBridge.Resources;component/Images/HomeDefault.png" />-->
+    <!--  全局 Lottie 动画资源  -->
+
+    <!--
+    <system:String x:Key="LoadingAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/BarCodeItemsLoading.json</system:String>
+    <system:String x:Key="AuthorizingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/IsAuthorizing.json</system:String>
+    <system:String x:Key="SecurityCameraUpdatePath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/SecurityCameraUpdate.json</system:String>
+    <system:String x:Key="BufferingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Buffering.json</system:String>
+    <system:String x:Key="VideoBufferingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/VideoBuffering.json</system:String>
+    <system:String x:Key="SettingLoadingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Settingloading.json</system:String>
+    <system:String x:Key="HoneLoadingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/HoneLoading.json</system:String>-->
+    <!--  主题  -->
+    <SolidColorBrush x:Key="MaterialDesign.Brush.Primary" Color="DodgerBlue" />
+    <SolidColorBrush x:Key="MaterialDesign.Brush.Primary.Light" Color="DodgerBlue" />
+    <SolidColorBrush x:Key="PrimaryHueLightBrush" Color="DodgerBlue" />
+    <SolidColorBrush x:Key="PrimaryHueLightForegroundBrush" Color="White" />
+    <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="FloralWhite" />
+    <SolidColorBrush x:Key="PrimaryHueMidForegroundBrush" Color="White" />
+    <SolidColorBrush x:Key="PrimaryHueDarkBrush" Color="#60CFFF" />
+    <SolidColorBrush x:Key="PrimaryHueDarkForegroundBrush" Color="White" />
+    <!--  转换器  -->
+
+    <!--  数学计算转换器  -->
+    <mathConverters1:AddConverter x:Key="AddConverter" />
+    <mathConverters1:SubtractConverter x:Key="SubtractConverter" />
+    <mathConverters1:MultiplyConverter x:Key="MultiplyConverter" />
+    <mathConverters1:DivideConverter x:Key="DivideConverter" />
+    <mathConverters1:GreaterThanConverter x:Key="GreaterThanConverter" />
+    <mathConverters1:LessThanConverter x:Key="LessThanConverter" />
+    <mathConverters1:EqualToConverter x:Key="EqualToConverter" />
+    <mathConverters1:GreaterThanToVisibilityConverter x:Key="GreaterThanToVisibilityConverter" />
+    <mathConverters1:LessThanToVisibilityConverter x:Key="LessThanToVisibilityConverter" />
+    <mathConverters1:EqualToToVisibilityConverter x:Key="EqualToToVisibilityConverter" />
+    <!--  合并资源  -->
+    <ResourceDictionary.MergedDictionaries>
+
+        <materialDesign:BundledTheme
+            BaseTheme="Light"
+            PrimaryColor="DeepPurple"
+            SecondaryColor="Lime" />
+        <!--  MaterialDesign  -->
+        <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+        <!--  提示框  -->
+        <ResourceDictionary Source="pack://application:,,,/ToastNotifications.Messages;component/Themes/Default.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

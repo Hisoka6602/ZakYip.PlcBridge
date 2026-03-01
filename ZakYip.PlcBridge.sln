@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36603.0 d17.14
+VisualStudioVersion = 17.14.36603.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Host", "ZakYip.PlcBridge.Host\ZakYip.PlcBridge.Host.csproj", "{51896BF5-6EDB-4A1B-A4A0-E967CB737305}"
 EndProject
@@ -20,6 +20,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Execution", "ZakYip.PlcBridge.Execution\ZakYip.PlcBridge.Execution.csproj", "{B214BA36-B527-4C2A-A5A1-91F00E240B3C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Ingress", "ZakYip.PlcBridge.Ingress\ZakYip.PlcBridge.Ingress.csproj", "{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Win", "Win", "{916ED014-F531-4BC7-AF42-902A38CEC3C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Client", "ZakYip.PlcBridge.Client\ZakYip.PlcBridge.Client.csproj", "{F41F0835-94AF-42CC-AC80-09E72F091EE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.PlcBridge.Resources", "ZakYip.PlcBridge.Resources\ZakYip.PlcBridge.Resources.csproj", "{87222641-D622-49F0-A3D2-A68A91A6DFEB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +53,14 @@ Global
 		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F41F0835-94AF-42CC-AC80-09E72F091EE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F41F0835-94AF-42CC-AC80-09E72F091EE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F41F0835-94AF-42CC-AC80-09E72F091EE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F41F0835-94AF-42CC-AC80-09E72F091EE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87222641-D622-49F0-A3D2-A68A91A6DFEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87222641-D622-49F0-A3D2-A68A91A6DFEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87222641-D622-49F0-A3D2-A68A91A6DFEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87222641-D622-49F0-A3D2-A68A91A6DFEB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -56,6 +70,8 @@ Global
 		{BEC8CF06-C55E-4F92-8F0E-D80F1F9B9402} = {C737466A-6584-4B5F-8902-DD23F6989883}
 		{B214BA36-B527-4C2A-A5A1-91F00E240B3C} = {D1FDC2A5-11A7-4005-8AC2-26C66EBFA584}
 		{E86E5F4B-7D9C-45EA-8BA5-FFE58A6B00F4} = {6F3E8291-1770-4062-BC1F-E04914DDD16B}
+		{F41F0835-94AF-42CC-AC80-09E72F091EE5} = {916ED014-F531-4BC7-AF42-902A38CEC3C1}
+		{87222641-D622-49F0-A3D2-A68A91A6DFEB} = {916ED014-F531-4BC7-AF42-902A38CEC3C1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F3789D0C-F655-4E11-A176-1C8B983FD415}
