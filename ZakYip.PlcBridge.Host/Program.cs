@@ -80,7 +80,7 @@ try {
     builder.Services.AddHostedService<ElevatorBridgeHostedService>();
     builder.Services.AddHostedService<ElevatorTaskMonitorHostedService>();
 
-    builder.Services.AddHostedService<UsageLimitHostedService>();
+    //builder.Services.AddHostedService<UsageLimitHostedService>();
 #if !DEBUG
                 builder.Services.AddWindowsService();
 #endif

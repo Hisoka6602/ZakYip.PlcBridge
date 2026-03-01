@@ -76,6 +76,12 @@ namespace ZakYip.PlcBridge.Core.Enums {
         /// 进料失败信号
         /// </summary>
         [Description("进料失败信号")]
-        InfeedFailedSignal = 11
+        InfeedFailedSignal = 11,
+
+        /// <summary>
+        /// 可执行查询信号（用于指示 PLC/电梯侧当前是否允许发起状态查询或读写请求）
+        /// </summary>
+        [Description("可执行查询信号")]
+        QueryExecutableSignal = 12,
     }
 }
