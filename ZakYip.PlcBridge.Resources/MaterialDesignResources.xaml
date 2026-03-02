@@ -116,9 +116,9 @@
     <FontFamily x:Key="EnglishAndNumericFontResource">
         pack://application:,,,/ZakYip.PlcBridge.Resources;component/Fonts/#更纱黑体 Mono SC Nerd
     </FontFamily>
-    <!--<FontFamily x:Key="IconFontFamily">
+    <FontFamily x:Key="IconFontFamily">
         pack://application:,,,/ZakYip.PlcBridge.Resources;component/Fonts/#iconfont
-    </FontFamily>-->
+    </FontFamily>
     <!--  全局图片定义  -->
     <!--~1~  空数据图  @1@
     <BitmapImage

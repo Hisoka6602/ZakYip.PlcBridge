@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <None Remove="Fonts\FiraCode-Bold.ttf" />
+    <None Remove="Fonts\iconfont.ttf" />
     <None Remove="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <None Remove="Fonts\更纱黑体 Mono SC Nerd.ttf" />
   </ItemGroup>
@@ -21,7 +22,6 @@
     <Folder Include="Images\" />
     <Folder Include="Lotties\" />
     <Folder Include="Notification\" />
-    <Folder Include="Styles\" />
     <Folder Include="Templates\" />
     <Folder Include="UserControls\" />
     <Folder Include="ValidationRules\" />
@@ -32,13 +32,14 @@
     <PackageReference Include="LottieSharp" Version="2.4.3" />
     <PackageReference Include="MaterialDesignThemes" Version="5.3.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
+    <PackageReference Include="Prism.DryIoc" Version="8.1.97" />
     <PackageReference Include="ToastNotifications.Messages.Net" Version="2.6.0" />
     <PackageReference Include="ToastNotifications.Net" Version="2.6.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Fonts\FiraCode-Bold.ttf" />
+    <Resource Include="Fonts\iconfont.ttf" />
     <Resource Include="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <Resource Include="Fonts\更纱黑体 Mono SC Nerd.ttf" />
   </ItemGroup>

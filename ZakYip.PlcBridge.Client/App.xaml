@@ -9,8 +9,8 @@
 
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/MaterialDesignResources.xaml" />
-                <!--<ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomStyleResources.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomTemplateResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomStyleResources.xaml" />
+                <!--<ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomTemplateResources.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomAnimationResources.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/CustomTemplateResources.xaml" />-->
             </ResourceDictionary.MergedDictionaries>

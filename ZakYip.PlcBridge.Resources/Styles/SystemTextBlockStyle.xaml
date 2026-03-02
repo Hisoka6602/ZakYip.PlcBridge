@@ -1,0 +1,15 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/ZakYip.PlcBridge.Resources;component/MaterialDesignResources.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+    <!--  图标  -->
+    <Style x:Key="SystemTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="Background" Value="{x:Null}" />
+        <Setter Property="FontFamily" Value="{StaticResource IconFontFamily}" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="FontWeight" Value="Thin" />
+        <!--<Setter Property="Foreground" Value="SlateGray" />-->
+    </Style>
+</ResourceDictionary>
