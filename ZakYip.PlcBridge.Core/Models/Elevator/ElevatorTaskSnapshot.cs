@@ -48,6 +48,6 @@ namespace ZakYip.PlcBridge.Core.Models.Elevator {
         /// <summary>
         /// 更新时间（UTC）
         /// </summary>
-        public DateTimeOffset UpdatedAtUtc { get; init; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset UpdatedAt { get; init; } = DateTimeOffset.Now;
     }
 }

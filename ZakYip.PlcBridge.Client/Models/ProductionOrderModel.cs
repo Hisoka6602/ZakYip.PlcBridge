@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.PlcBridge.Client.Enums;
 using System.Diagnostics.CodeAnalysis;
 
 namespace ZakYip.PlcBridge.Client.Models {
@@ -16,13 +17,13 @@ namespace ZakYip.PlcBridge.Client.Models {
         private string _itemCode = string.Empty;
         private string _batchNo = string.Empty;
         private int _plannedBoxCount;
+        private OperationResultStatus _pushStatus;
 
         /// <summary>
         /// 工单号。
         /// </summary>
         public required string WorkOrderNo {
             get => _workOrderNo;
-            [MemberNotNull(nameof(_workOrderNo))]
             set => SetProperty(ref _workOrderNo, value);
         }
 
@@ -31,7 +32,6 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// </summary>
         public required string ItemCode {
             get => _itemCode;
-            [MemberNotNull(nameof(_itemCode))]
             set => SetProperty(ref _itemCode, value);
         }
 
@@ -40,7 +40,6 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// </summary>
         public required string BatchNo {
             get => _batchNo;
-            [MemberNotNull(nameof(_batchNo))]
             set => SetProperty(ref _batchNo, value);
         }
 
@@ -50,6 +49,14 @@ namespace ZakYip.PlcBridge.Client.Models {
         public required int PlannedBoxCount {
             get => _plannedBoxCount;
             set => SetProperty(ref _plannedBoxCount, value);
+        }
+
+        /// <summary>
+        /// 推送状态。
+        /// </summary>
+        public OperationResultStatus PushStatus {
+            get => _pushStatus;
+            set => SetProperty(ref _pushStatus, value);
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.PlcBridge.Client.Attributes;
+using ZakYip.PlcBridge.Resources.Attributes;
 
 namespace ZakYip.PlcBridge.Client.Enums {
 
@@ -16,13 +16,13 @@ namespace ZakYip.PlcBridge.Client.Enums {
         /// <summary>
         /// 成功
         /// </summary>
-        [Description("成功"), WinLottiesPath("SuccessAnimationPath")]
+        [Description("推送成功"), WinLottiesPath("SuccessAnimationPath"), WinIconColor("#5A32CD32")]
         Success = 0,
 
         /// <summary>
         /// 失败
         /// </summary>
-        [Description("失败"), WinLottiesPath("FailedAnimationPath")]
+        [Description("推送失败"), WinLottiesPath("FailedAnimationPath"), WinIconColor("#5AFF0000")]
         Failure = 1
     }
 }

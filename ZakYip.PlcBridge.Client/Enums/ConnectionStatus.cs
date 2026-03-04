@@ -4,7 +4,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.PlcBridge.Client.Attributes;
+using ZakYip.PlcBridge.Resources.Attributes;
 
 namespace ZakYip.PlcBridge.Client.Enums {
 

@@ -2,6 +2,8 @@
     x:Class="ZakYip.PlcBridge.Client.Views.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:colorConverters="clr-namespace:ZakYip.PlcBridge.Resources.Converters.ColorConverters;assembly=ZakYip.PlcBridge.Resources"
+    xmlns:converters="clr-namespace:ZakYip.PlcBridge.Resources.Converters;assembly=ZakYip.PlcBridge.Resources"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:ZakYip.PlcBridge.Client"
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
@@ -27,12 +29,21 @@
             ResizeBorderThickness="5"
             UseAeroCaptionButtons="True" />
     </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <colorConverters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+        <colorConverters:EnumWinIconColorToBrushConverter x:Key="EnumWinIconColorToBrushConverter" />
+        <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
+        <colorConverters:EnumGreaterThanToBrushConverter x:Key="EnumGreaterThanToBrushConverter" />
+        <converters:EnumEqualsToBooleanConverter x:Key="EnumEqualsToBooleanConverter" />
+        <converters:IsNotNullToVisibilityConverter x:Key="IsNotNullToVisibilityConverter" />
+    </Window.Resources>
+
     <materialDesign:Card
         Margin="0"
         materialDesign:ElevationAssist.Elevation="Dp2"
         materialDesign:ShadowAssist.Darken="True"
         Background="White"
-        UniformCornerRadius="{Binding UniformCornerRadius, UpdateSourceTrigger=PropertyChanged}">
+        UniformCornerRadius="5">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -107,7 +118,7 @@
                             Foreground="DodgerBlue"
                             IsReadOnly="True"
                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                            Text="0123456789ABC"
+                            Text="{Binding CallTaskId, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
                             TextWrapping="Wrap"
                             VerticalScrollBarVisibility="Auto" />
                     </StackPanel>
@@ -122,11 +133,11 @@
                         <StackPanel VerticalAlignment="Center" Orientation="Vertical">
                             <Button
                                 materialDesign:ButtonProgressAssist.IndicatorForeground="Gold"
-                                materialDesign:ButtonProgressAssist.IsIndeterminate="True"
-                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="True"
+                                materialDesign:ButtonProgressAssist.IsIndeterminate="{Binding ProductionProgress.ElevatorCallStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="{Binding ProductionProgress.ElevatorCallStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
                                 materialDesign:ButtonProgressAssist.Value="-1"
-                                Background="DodgerBlue"
-                                BorderBrush="DodgerBlue"
+                                Background="{Binding ProductionProgress.ElevatorCallStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
+                                BorderBrush="{Binding ProductionProgress.ElevatorCallStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
                                 Focusable="False"
                                 Style="{StaticResource MaterialDesignFloatingActionSecondaryButton}">
 
@@ -134,6 +145,7 @@
                                     Margin="1"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
+                                    Cursor=""
                                     FontSize="30"
                                     Foreground="White"
                                     Style="{StaticResource SystemTextBlockStyle}"
@@ -144,8 +156,9 @@
                                 VerticalAlignment="Center"
                                 FontFamily="{StaticResource EnglishAndNumericFontResource}"
                                 FontSize="12"
-                                Foreground="DimGray"
-                                Text="等待呼叫电梯" />
+                                Foreground="DimGray">
+                                <Run>呼叫电梯状态:</Run> <Run Text="{Binding ProductionProgress.ElevatorCallStatus, Converter={StaticResource EnumDescriptionConverter}}" />
+                            </TextBlock>
                         </StackPanel>
                         <!--  横线  -->
                         <Border
@@ -153,17 +166,17 @@
                             Height="4"
                             Margin="5,0,5,15"
                             VerticalAlignment="Center"
-                            Background="DarkGray"
+                            Background="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
                             CornerRadius="2" />
                         <!--  等待电梯到位  -->
                         <StackPanel VerticalAlignment="Center" Orientation="Vertical">
                             <Button
                                 materialDesign:ButtonProgressAssist.IndicatorForeground="Gold"
-                                materialDesign:ButtonProgressAssist.IsIndeterminate="False"
-                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="False"
+                                materialDesign:ButtonProgressAssist.IsIndeterminate="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
                                 materialDesign:ButtonProgressAssist.Value="-1"
-                                Background="DarkGray"
-                                BorderBrush="DarkGray"
+                                Background="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
+                                BorderBrush="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
                                 Focusable="False"
                                 Style="{StaticResource MaterialDesignFloatingActionSecondaryButton}">
 
@@ -181,8 +194,9 @@
                                 VerticalAlignment="Center"
                                 FontFamily="{StaticResource EnglishAndNumericFontResource}"
                                 FontSize="12"
-                                Foreground="DimGray"
-                                Text="等待电梯到位" />
+                                Foreground="DimGray">
+                                <Run>电梯到位状态:</Run> <Run Text="{Binding ProductionProgress.ElevatorArriveStatus, Converter={StaticResource EnumDescriptionConverter}}" />
+                            </TextBlock>
                         </StackPanel>
                         <!--  横线  -->
                         <Border
@@ -190,17 +204,17 @@
                             Height="4"
                             Margin="5,0,5,15"
                             VerticalAlignment="Center"
-                            Background="DarkGray"
+                            Background="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
                             CornerRadius="2" />
                         <!--  等待进料完成  -->
                         <StackPanel VerticalAlignment="Center" Orientation="Vertical">
                             <Button
                                 materialDesign:ButtonProgressAssist.IndicatorForeground="Gold"
-                                materialDesign:ButtonProgressAssist.IsIndeterminate="False"
-                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="False"
+                                materialDesign:ButtonProgressAssist.IsIndeterminate="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:ButtonProgressAssist.IsIndicatorVisible="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumEqualsToBooleanConverter}, ConverterParameter=1, UpdateSourceTrigger=PropertyChanged}"
                                 materialDesign:ButtonProgressAssist.Value="-1"
-                                Background="DarkGray"
-                                BorderBrush="DarkGray"
+                                Background="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
+                                BorderBrush="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumGreaterThanToBrushConverter}, ConverterParameter=0|#FF1E90FF|#FFA9A9A9}"
                                 Focusable="False"
                                 Style="{StaticResource MaterialDesignFloatingActionSecondaryButton}">
 
@@ -218,8 +232,9 @@
                                 VerticalAlignment="Center"
                                 FontFamily="{StaticResource EnglishAndNumericFontResource}"
                                 FontSize="12"
-                                Foreground="DimGray"
-                                Text="等待进料完成" />
+                                Foreground="DimGray">
+                                <Run>进料完成状态:</Run> <Run Text="{Binding ProductionProgress.FeedingCompleteStatus, Converter={StaticResource EnumDescriptionConverter}}" />
+                            </TextBlock>
                         </StackPanel>
                     </StackPanel>
                     <!--  上次提交记录  -->
@@ -264,7 +279,7 @@
                                         Height="30"
                                         MaxWidth="500"
                                         Style="{StaticResource AlphanumericTextBoxStyle}"
-                                        Text="{Binding ProgramSettingsInfo.MachineCode, UpdateSourceTrigger=LostFocus}" />
+                                        Text="{Binding ProductionOrder.WorkOrderNo, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -298,7 +313,7 @@
                                         Height="30"
                                         MaxWidth="500"
                                         Style="{StaticResource AlphanumericTextBoxStyle}"
-                                        Text="{Binding ProgramSettingsInfo.MachineCode, UpdateSourceTrigger=LostFocus}" />
+                                        Text="{Binding ProductionOrder.ItemCode, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -332,7 +347,7 @@
                                         Height="30"
                                         MaxWidth="500"
                                         Style="{StaticResource AlphanumericTextBoxStyle}"
-                                        Text="{Binding ProgramSettingsInfo.MachineCode, UpdateSourceTrigger=LostFocus}" />
+                                        Text="{Binding ProductionOrder.BatchNo, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -366,7 +381,7 @@
                                         Height="30"
                                         MaxWidth="500"
                                         Style="{StaticResource AlphanumericTextBoxStyle}"
-                                        Text="{Binding ProgramSettingsInfo.MachineCode, UpdateSourceTrigger=LostFocus}" />
+                                        Text="{Binding ProductionOrder.PlannedBoxCount, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -375,10 +390,11 @@
                             Width="100"
                             Height="100"
                             Margin="0,40"
-                            materialDesign:ButtonProgressAssist.IsIndeterminate="True"
-                            materialDesign:ButtonProgressAssist.IsIndicatorVisible="True"
+                            materialDesign:ButtonProgressAssist.IsIndeterminate="{Binding IsPushing, UpdateSourceTrigger=PropertyChanged}"
+                            materialDesign:ButtonProgressAssist.IsIndicatorVisible="{Binding IsPushing, UpdateSourceTrigger=PropertyChanged}"
                             materialDesign:ButtonProgressAssist.Value="-1"
                             Background="DodgerBlue"
+                            Command="{Binding PushProductionInfoCommand}"
                             Focusable="False"
                             Style="{StaticResource MaterialDesignFloatingActionButton}">
                             <StackPanel Orientation="Vertical">
@@ -398,23 +414,25 @@
                                     Text="推送数据" />
                             </StackPanel>
                         </Button>
-                        <!--  Background="#9A90EE90"  -->
-                        <Border
-                            MinWidth="100"
-                            MinHeight="40"
-                            Padding="2"
-                            VerticalAlignment="Bottom"
-                            Background="#5AFF0000"
-                            CornerRadius="5">
-                            <TextBlock
-                                Padding="5"
-                                VerticalAlignment="Center"
-                                FontFamily="{StaticResource EnglishAndNumericFontResource}"
-                                Foreground="Gray">
-                                <Run>工单</Run> <Run Text="013245" /> <Run>推送成功</Run>
-                            </TextBlock>
-                        </Border>
                     </StackPanel>
+                </Border>
+                <!--  Background="#9A90EE90"  -->
+                <Border
+                    Grid.Column="1"
+                    MinWidth="100"
+                    MinHeight="40"
+                    Margin="5,0,5,30"
+                    VerticalAlignment="Bottom"
+                    Background="#5A32CD32"
+                    CornerRadius="5"
+                    Visibility="{Binding PreviousProductionOrder, Converter={StaticResource IsNotNullToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBlock
+                        Padding="5"
+                        VerticalAlignment="Center"
+                        FontFamily="{StaticResource EnglishAndNumericFontResource}"
+                        Foreground="Gray">
+                        <Run>工单</Run> <Run Text="{Binding PreviousProductionOrder.WorkOrderNo, UpdateSourceTrigger=PropertyChanged}" /> <Run Text="{Binding PreviousProductionOrder.PushStatus, Converter={StaticResource EnumDescriptionConverter}}" />
+                    </TextBlock>
                 </Border>
             </Grid>
             <!--  状态信息  -->
@@ -435,7 +453,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontSize="13"
-                            Foreground="DarkOrange"
+                            Foreground="{Binding SignalRConnectionStatus, Converter={StaticResource EnumWinIconColorToBrushConverter}}"
                             Style="{StaticResource SystemTextBlockStyle}"
                             Text="&#xe600;" />
                         <TextBlock
@@ -444,7 +462,7 @@
                             FontFamily="{StaticResource EnglishAndNumericFontResource}"
                             FontSize="12"
                             Foreground="DimGray"
-                            Text="连接中..." />
+                            Text="{Binding SignalRConnectionStatus, Converter={StaticResource EnumDescriptionConverter}}" />
                     </StackPanel>
                     <!--  S7连接状态  -->
                     <StackPanel Margin="20,0" Orientation="Horizontal">
@@ -461,7 +479,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontSize="13"
-                            Foreground="DarkGray"
+                            Foreground="{Binding S7ConnectionStatus, Converter={StaticResource EnumWinIconColorToBrushConverter}}"
                             Style="{StaticResource SystemTextBlockStyle}"
                             Text="&#xe600;" />
                         <TextBlock
@@ -470,7 +488,7 @@
                             FontFamily="{StaticResource EnglishAndNumericFontResource}"
                             FontSize="12"
                             Foreground="DimGray"
-                            Text="未连接" />
+                            Text="{Binding S7ConnectionStatus, Converter={StaticResource EnumDescriptionConverter}}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
