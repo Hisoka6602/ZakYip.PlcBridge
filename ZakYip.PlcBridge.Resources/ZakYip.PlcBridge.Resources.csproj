@@ -12,6 +12,7 @@
     <None Remove="Fonts\iconfont.ttf" />
     <None Remove="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <None Remove="Fonts\更纱黑体 Mono SC Nerd.ttf" />
+    <None Remove="Lotties\Loading 40 _ Paperplane.json" />
     <None Remove="Lotties\Process - Failed.json" />
     <None Remove="Lotties\success.json" />
   </ItemGroup>
@@ -42,6 +43,7 @@
     <Resource Include="Fonts\iconfont.ttf" />
     <Resource Include="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <Resource Include="Fonts\更纱黑体 Mono SC Nerd.ttf" />
+    <Resource Include="Lotties\Loading 40 _ Paperplane.json" />
     <Resource Include="Lotties\Process - Failed.json" />
     <Resource Include="Lotties\success.json" />
   </ItemGroup>

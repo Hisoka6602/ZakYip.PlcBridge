@@ -200,6 +200,7 @@
 
     <system:String x:Key="SuccessAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/success.json</system:String>
     <system:String x:Key="FailedAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Process - Failed.json</system:String>
+    <system:String x:Key="LoadingAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Loading 40 _ Paperplane.json</system:String>
 
     <!--  主题  -->
     <SolidColorBrush x:Key="MaterialDesign.Brush.Primary" Color="DodgerBlue" />

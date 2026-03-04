@@ -33,6 +33,16 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         private ConnectionStatus _s7ConnectionStatus = ConnectionStatus.Disconnected;
         private string _callTaskId = string.Empty;
         private ProductionOrderModel? _previousProductionOrder;
+        private OperationResultStatus? _operationResultStatus;
+        private bool _isLoading = true;
+
+        /// <summary>
+        /// 是否加载中。
+        /// </summary>
+        public bool IsLoading {
+            get => _isLoading;
+            private set => SetProperty(ref _isLoading, value);
+        }
 
         public ProductionOrderModel ProductionOrder {
             get => _productionOrder;
@@ -45,6 +55,11 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         public ProductionOrderModel? PreviousProductionOrder {
             get => _previousProductionOrder;
             private set => SetProperty(ref _previousProductionOrder, value);
+        }
+
+        public OperationResultStatus? OperationResultStatus {
+            get => _operationResultStatus;
+            set => SetProperty(ref _operationResultStatus, value);
         }
 
         /// <summary>
@@ -93,7 +108,9 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
 
         public ICommand LoadedCommand => new DelegateCommand<object>(LoadedDelegate);
 
-        private void LoadedDelegate(object obj) {
+        private async void LoadedDelegate(object obj) {
+            await Task.Delay(10000);
+            IsLoading = false;
         }
 
         public ICommand CloseWinCommand => new DelegateCommand<object>(CloseWinDelegate);
@@ -115,7 +132,12 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             Console.WriteLine(ProductionOrder);
             Console.WriteLine($"推送生产信息");
             await Task.Delay(5000);
+
             IsPushing = false;
+            OperationResultStatus = Enums.OperationResultStatus.Failure;
+
+            await Task.Delay(4000);
+            OperationResultStatus = null;
         }
     }
 }
