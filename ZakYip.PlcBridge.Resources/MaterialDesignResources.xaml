@@ -195,6 +195,12 @@
     <system:String x:Key="VideoBufferingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/VideoBuffering.json</system:String>
     <system:String x:Key="SettingLoadingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Settingloading.json</system:String>
     <system:String x:Key="HoneLoadingPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/HoneLoading.json</system:String>-->
+
+    <!--  全局 Lottie 动画资源  -->
+
+    <system:String x:Key="SuccessAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/success.json</system:String>
+    <system:String x:Key="FailedAnimationPath">pack://application:,,,/ZakYip.PlcBridge.Resources;component/Lotties/Process - Failed.json</system:String>
+
     <!--  主题  -->
     <SolidColorBrush x:Key="MaterialDesign.Brush.Primary" Color="DodgerBlue" />
     <SolidColorBrush x:Key="MaterialDesign.Brush.Primary.Light" Color="DodgerBlue" />

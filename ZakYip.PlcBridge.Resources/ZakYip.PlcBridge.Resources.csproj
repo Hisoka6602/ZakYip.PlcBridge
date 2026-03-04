@@ -12,6 +12,8 @@
     <None Remove="Fonts\iconfont.ttf" />
     <None Remove="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <None Remove="Fonts\更纱黑体 Mono SC Nerd.ttf" />
+    <None Remove="Lotties\Process - Failed.json" />
+    <None Remove="Lotties\success.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,7 +22,6 @@
     <Folder Include="Enums\" />
     <Folder Include="Extensions\" />
     <Folder Include="Images\" />
-    <Folder Include="Lotties\" />
     <Folder Include="Notification\" />
     <Folder Include="Templates\" />
     <Folder Include="UserControls\" />
@@ -42,6 +43,8 @@
     <Resource Include="Fonts\iconfont.ttf" />
     <Resource Include="Fonts\sarasa-mono-sc-nerd-light.ttf" />
     <Resource Include="Fonts\更纱黑体 Mono SC Nerd.ttf" />
+    <Resource Include="Lotties\Process - Failed.json" />
+    <Resource Include="Lotties\success.json" />
   </ItemGroup>
 
 </Project>

@@ -7,6 +7,8 @@
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:mvvm="http://prismlibrary.com/"
+    xmlns:presentation="clr-namespace:ZakYip.PlcBridge.Client.Presentation"
+    xmlns:wpf="clr-namespace:LottieSharp.WPF;assembly=LottieSharp"
     Width="980"
     Height="600"
     mvvm:ViewModelLocator.AutoWireViewModel="True"
@@ -143,7 +145,7 @@
                                 FontFamily="{StaticResource EnglishAndNumericFontResource}"
                                 FontSize="12"
                                 Foreground="DimGray"
-                                Text="呼叫电梯" />
+                                Text="等待呼叫电梯" />
                         </StackPanel>
                         <!--  横线  -->
                         <Border
@@ -231,7 +233,7 @@
                     Background="#6FDCDCDC"
                     CornerRadius="15,0,0,15">
 
-                    <StackPanel Orientation="Vertical">
+                    <StackPanel VerticalAlignment="Stretch" Orientation="Vertical">
                         <!--  工单号  -->
                         <StackPanel Margin="0,5" Orientation="Horizontal">
                             <!--  图标  -->
@@ -396,6 +398,22 @@
                                     Text="推送数据" />
                             </StackPanel>
                         </Button>
+                        <!--  Background="#9A90EE90"  -->
+                        <Border
+                            MinWidth="100"
+                            MinHeight="40"
+                            Padding="2"
+                            VerticalAlignment="Bottom"
+                            Background="#5AFF0000"
+                            CornerRadius="5">
+                            <TextBlock
+                                Padding="5"
+                                VerticalAlignment="Center"
+                                FontFamily="{StaticResource EnglishAndNumericFontResource}"
+                                Foreground="Gray">
+                                <Run>工单</Run> <Run Text="013245" /> <Run>推送成功</Run>
+                            </TextBlock>
+                        </Border>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -455,6 +473,23 @@
                             Text="未连接" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+            <Border
+                Grid.Row="1"
+                Grid.RowSpan="2"
+                Background="White"
+                Visibility="Collapsed">
+
+                <wpf:LottieAnimationView
+                    MinWidth="300"
+                    MinHeight="500"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    presentation:LottiePlayBehavior.PlayFromStartWhenVisible="{Binding IsVisible, RelativeSource={RelativeSource AncestorType=Border}}"
+                    AutoPlay="True"
+                    CacheMode="BitmapCache"
+                    RepeatCount="1"
+                    ResourcePath="{StaticResource FailedAnimationPath}" />
             </Border>
         </Grid>
     </materialDesign:Card>

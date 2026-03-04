@@ -22,4 +22,10 @@
     <ProjectReference Include="..\ZakYip.PlcBridge.Resources\ZakYip.PlcBridge.Resources.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
