@@ -25,6 +25,7 @@ namespace ZakYip.PlcBridge.Ingress {
         private const string CallElevatorPath = "/api/wterp/erptofullinkdt";
         private const string ReportInfeedDonePath = "/api/wterp/erptodtStatus";
         private const string QueryTaskPath = "/api/wterp/DtStatusToErp";
+        private const string PushProductionOrderPath = "/api/WTErp/DtToWorkOrder";
 
         private static readonly JsonSerializerOptions JsonOptions = new() {
             PropertyNamingPolicy = null,
@@ -157,6 +158,36 @@ namespace ZakYip.PlcBridge.Ingress {
             _logger.LogInformation($"电梯任务查询:{JsonConvert.SerializeObject(elevatorApiResult, Formatting.Indented)}");
 
             return elevatorApiResult;
+        }
+
+        public async ValueTask<ElevatorApiResult> PushProductionOrderAsync(
+            ProductionOrderPushRequest request,
+            CancellationToken cancellationToken = default) {
+            var payload = JsonSerializer.Serialize(request, JsonOptions);
+            var snapshot = await PostAsync(PushProductionOrderPath, payload, cancellationToken).ConfigureAwait(false);
+
+            if (!snapshot.IsTransportOk) {
+                return BuildApiResultFail(snapshot, ElevatorApiErrorCode.NetworkError, snapshot.FailMessage);
+            }
+
+            var env = DeserializeEnvelope<JsonElement>(snapshot.ResponsePayload, out var parseError);
+            if (env is null) {
+                return BuildApiResultFail(snapshot, ElevatorApiErrorCode.Unknown, parseError ?? "生产订单推送接口返回无法解析");
+            }
+
+            var isOk = IsEnvelopeSuccess(env);
+            var errMsg = env.ErrMsg ?? (isOk ? null : $"生产订单推送失败，ErrCode={env.ErrCode ?? "null"}");
+
+            return new ElevatorApiResult {
+                IsSuccess = isOk,
+                ErrorCode = isOk ? ElevatorApiErrorCode.None : ElevatorApiErrorCode.RemoteRejected,
+                ErrorMessage = errMsg,
+                DurationMs = snapshot.DurationMs,
+                TraceId = snapshot.TraceId,
+                RequestPayload = snapshot.RequestPayload,
+                ResponsePayload = snapshot.ResponsePayload,
+                Curl = snapshot.Curl
+            };
         }
 
         private async ValueTask<HttpSnapshot> PostAsync(string relativePath, string requestPayload, CancellationToken cancellationToken) {

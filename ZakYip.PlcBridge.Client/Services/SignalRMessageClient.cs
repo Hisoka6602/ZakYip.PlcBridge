@@ -139,9 +139,9 @@ namespace ZakYip.PlcBridge.Client.Services {
         /// 推送订阅（需要响应）。
         /// </summary>
         public async ValueTask<SignalRInvokeResponse> InvokeAsync(
-            string methodName,
-            object? request,
-            CancellationToken cancellationToken = default) {
+      string methodName,
+      object? request,
+      CancellationToken cancellationToken = default) {
             ThrowIfDisposed();
 
             if (string.IsNullOrWhiteSpace(methodName)) {
@@ -165,27 +165,27 @@ namespace ZakYip.PlcBridge.Client.Services {
 
             try {
                 object? result;
+
                 if (request is null) {
                     // 0 参数：避免分配
                     result = await conn.InvokeCoreAsync<object?>(methodName, EmptyArgs, cancellationToken).ConfigureAwait(false);
                 }
                 else {
-                    // 1 参数：使用 ArrayPool 降低 GC 压力
-                    var pool = ArrayPool<object?>.Shared;
-                    var args = pool.Rent(1);
-                    args[0] = request;
-
-                    try {
-                        result = await conn.InvokeCoreAsync<object?>(methodName, args.AsSpan(0, 1).ToArray(), cancellationToken).ConfigureAwait(false);
-                        // 说明：InvokeCoreAsync 需要 object?[]；此处 ToArray 会分配。
-                        // 若追求极致性能，可改用自定义 HubProtocol 或封装 HubConnection（需要更深层改造）。
-                    }
-                    finally {
-                        args[0] = null;
-                        pool.Return(args, clearArray: false);
-                    }
+                    // 1 参数：InvokeCoreAsync 需要 object?[]，此处不可避免分配
+                    result = await conn.InvokeCoreAsync<object?>(methodName, new object?[] { request }, cancellationToken).ConfigureAwait(false);
                 }
 
+                // ✅ 关键：若服务端返回 InvokeAckResponse 形状，则以服务端 IsSuccess 为准
+                if (TryExtractInvokeAck(result, out var serverSuccess, out var serverPayload, out var serverErrorMessage, out var serverRespondedAt)) {
+                    return new SignalRInvokeResponse {
+                        IsSuccess = serverSuccess,
+                        Payload = serverPayload,
+                        ErrorMessage = serverSuccess ? null : (serverErrorMessage ?? "服务端返回失败。"),
+                        RespondedAt = serverRespondedAt ?? DateTimeOffset.Now
+                    };
+                }
+
+                // 兜底：若服务端没有返回标准应答结构，则认为调用成功，Payload=原始返回
                 return new SignalRInvokeResponse {
                     IsSuccess = true,
                     Payload = result,
@@ -243,6 +243,7 @@ namespace ZakYip.PlcBridge.Client.Services {
             var builder = new HubConnectionBuilder();
 
             builder.WithUrl(_options.HubUrl, httpOptions => {
+                httpOptions.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
                 // AccessToken 由 Options 提供时再配置，避免每次连接分配
                 if (!string.IsNullOrWhiteSpace(_options.AccessToken)) {
                     httpOptions.AccessTokenProvider = static () => Task.FromResult<string?>(null);
@@ -351,6 +352,73 @@ namespace ZakYip.PlcBridge.Client.Services {
             if (Volatile.Read(ref _isDisposed) != 0) {
                 throw new ObjectDisposedException(nameof(SignalRMessageClient), "对象已释放。");
             }
+        }
+
+        private static bool TryExtractInvokeAck(
+    object? result,
+    out bool isSuccess,
+    out object? payload,
+    out string? errorMessage,
+    out DateTimeOffset? respondedAt) {
+            isSuccess = false;
+            payload = null;
+            errorMessage = null;
+            respondedAt = null;
+
+            if (result is null) {
+                return false;
+            }
+
+            // 形态 1：JsonElement
+            if (result is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Object) {
+                if (!je.TryGetProperty("IsSuccess", out var isSuccessProp) || isSuccessProp.ValueKind is not System.Text.Json.JsonValueKind.True and not System.Text.Json.JsonValueKind.False) {
+                    return false;
+                }
+
+                isSuccess = isSuccessProp.GetBoolean();
+
+                if (je.TryGetProperty("Payload", out var payloadProp)) {
+                    // 保留 JsonElement，交由上层决定是否反序列化
+                    payload = payloadProp;
+                }
+
+                if (je.TryGetProperty("ErrorMessage", out var errProp) && errProp.ValueKind == System.Text.Json.JsonValueKind.String) {
+                    errorMessage = errProp.GetString();
+                }
+
+                if (je.TryGetProperty("RespondedAt", out var timeProp) && timeProp.ValueKind == System.Text.Json.JsonValueKind.String) {
+                    if (DateTimeOffset.TryParse(timeProp.GetString(), out var dto)) {
+                        respondedAt = dto;
+                    }
+                }
+
+                return true;
+            }
+
+            // 形态 2：普通对象（反射读取属性）
+            var type = result.GetType();
+
+            var isSuccessProperty = type.GetProperty("IsSuccess");
+            if (isSuccessProperty?.PropertyType != typeof(bool)) {
+                return false;
+            }
+
+            isSuccess = (bool)isSuccessProperty.GetValue(result)!;
+
+            var payloadProperty = type.GetProperty("Payload");
+            payload = payloadProperty?.GetValue(result);
+
+            var errorProperty = type.GetProperty("ErrorMessage");
+            if (errorProperty?.PropertyType == typeof(string)) {
+                errorMessage = (string?)errorProperty.GetValue(result);
+            }
+
+            var respondedAtProperty = type.GetProperty("RespondedAt");
+            if (respondedAtProperty?.PropertyType == typeof(DateTimeOffset)) {
+                respondedAt = (DateTimeOffset?)respondedAtProperty.GetValue(result);
+            }
+
+            return true;
         }
 
         /// <summary>

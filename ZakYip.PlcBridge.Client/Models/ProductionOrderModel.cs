@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.PlcBridge.Client.Enums;
+using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 
 namespace ZakYip.PlcBridge.Client.Models {
@@ -22,6 +23,7 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// <summary>
         /// 工单号。
         /// </summary>
+        [JsonPropertyName("workOrderNo")]
         public required string WorkOrderNo {
             get => _workOrderNo;
             set => SetProperty(ref _workOrderNo, value);
@@ -30,6 +32,7 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// <summary>
         /// 物料编号。
         /// </summary>
+        [JsonPropertyName("itemCode")]
         public required string ItemCode {
             get => _itemCode;
             set => SetProperty(ref _itemCode, value);
@@ -38,6 +41,7 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// <summary>
         /// 批次。
         /// </summary>
+        [JsonPropertyName("batchNo")]
         public required string BatchNo {
             get => _batchNo;
             set => SetProperty(ref _batchNo, value);
@@ -46,6 +50,7 @@ namespace ZakYip.PlcBridge.Client.Models {
         /// <summary>
         /// 计划箱数。
         /// </summary>
+        [JsonPropertyName("PlanQty")]
         public required int PlannedBoxCount {
             get => _plannedBoxCount;
             set => SetProperty(ref _plannedBoxCount, value);

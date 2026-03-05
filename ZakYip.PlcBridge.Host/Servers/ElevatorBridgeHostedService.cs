@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using ZakYip.PlcBridge.Core.Models;
 using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Options;
+using ZakYip.PlcBridge.Core.SignalR;
 using ZakYip.PlcBridge.Core.Utilities;
 using ZakYip.PlcBridge.Core.Models.Elevator;
 
@@ -21,6 +22,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
         private readonly SafeExecutor _safeExecutor;
         private readonly IPlcManager _plcManager;
         private readonly IElevatorApiClient _elevatorApiClient;
+        private readonly IPlcBridgeMessageBroadcaster _plcBridgeMessageBroadcaster;
         private readonly IOptionsMonitor<ElevatorHandshakeDbOptions> _options;
 
         /// <summary>
@@ -45,12 +47,13 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
         public ElevatorBridgeHostedService(ILogger<ElevatorBridgeHostedService> logger,
             SafeExecutor safeExecutor, IPlcManager plcManager,
-            IElevatorApiClient elevatorApiClient,
+            IElevatorApiClient elevatorApiClient, IPlcBridgeMessageBroadcaster plcBridgeMessageBroadcaster,
             IOptionsMonitor<ElevatorHandshakeDbOptions> options) {
             _logger = logger;
             _safeExecutor = safeExecutor;
             _plcManager = plcManager;
             _elevatorApiClient = elevatorApiClient;
+            _plcBridgeMessageBroadcaster = plcBridgeMessageBroadcaster;
             _options = options;
 
             //DB更改事件
@@ -149,14 +152,15 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
                         //测试输出
                         _logger.LogInformation($"物料编号: {itemCode}, 批次: {batchNo}, 箱子数量: {boxQuantity}, 叫电梯楼层: {callElevatorLayer}, 叫电梯使用层数: {callElevatorUseLayer}, 唯一值Guid: {uniqueGuid}");
-                        var result = await _elevatorApiClient.CallElevatorAsync(new ElevatorCallRequest {
+                        var elevatorCallRequest = new ElevatorCallRequest {
                             ErpGuid = uniqueGuid.ToString() ?? string.Empty,
                             ItemCode = itemCode ?? string.Empty,
                             Layer = callElevatorLayer,
                             Num = callElevatorUseLayer,
                             BoxQty = boxQuantity,
                             BatchNo = batchNo
-                        });
+                        };
+                        var result = await _elevatorApiClient.CallElevatorAsync(elevatorCallRequest);
                         if (!result.IsSuccess) {
                             //写呼叫电梯失败
 
@@ -206,6 +210,9 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems);
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
+
+                            await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorCallRequested,
+                                 JsonConvert.SerializeObject(elevatorCallRequest));
                         }
                     }
 
@@ -231,10 +238,12 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         else {
                             _logger.LogError($"未配置唯一值Guid地址");
                         }
-                        var result = await _elevatorApiClient.ReportInfeedDoneAsync(new ElevatorInfeedDoneRequest {
+
+                        var elevatorInfeedDoneRequest = new ElevatorInfeedDoneRequest {
                             ErpGuid = uniqueGuid ?? string.Empty,
                             Status = 4
-                        });
+                        };
+                        var result = await _elevatorApiClient.ReportInfeedDoneAsync(elevatorInfeedDoneRequest);
 
                         //测试输出
                         _logger.LogInformation($"进料完成信号-唯一值Guid: {uniqueGuid}, 执行完成状态: {result.IsSuccess}");
@@ -272,16 +281,22 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems);
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
+                            await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyFeedingCompleted,
+                                JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
                         }
                     }
                 }, "PLC DB Bool 变化处理");
             };
 
-            _plcManager.Faulted += (sender, args) => {
+            _plcManager.Faulted += async (sender, args) => {
                 _logger.LogError($"plcManager异常:{args.Exception}");
+                await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyS7ConnectionStatusChanged,
+                    nameof(PlcStatus.Faulted));
             };
-            _plcManager.StatusChanged += (sender, args) => {
+            _plcManager.StatusChanged += async (sender, args) => {
                 _logger.LogInformation($"PLC连接状态变更:旧状态-{args.OldStatus},新状态-{args.NewStatus}");
+                await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyS7ConnectionStatusChanged,
+                    nameof(args.NewStatus));
             };
         }
 

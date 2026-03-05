@@ -7,9 +7,11 @@ using ZakYip.PlcBridge.Ingress;
 using Microsoft.Extensions.Options;
 using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Options;
+using ZakYip.PlcBridge.Core.SignalR;
 using ZakYip.PlcBridge.Host.Servers;
 using ZakYip.PlcBridge.Core.Utilities;
 using ZakYip.PlcBridge.Execution.Store;
+using ZakYip.PlcBridge.Ingress.SignalR;
 using ZakYip.PlcBridge.Execution.Security;
 using ZakYip.PlcBridge.Core.Models.Security;
 
@@ -19,8 +21,14 @@ var logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurr
 try {
     logger.Info("应用程序启动");
 
-    var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
-
+    var builder = WebApplication.CreateBuilder(args);
+    var urls = builder.Configuration["Urls"];
+    if (!string.IsNullOrWhiteSpace(urls)) {
+        builder.WebHost.UseUrls(urls);
+    }
+    else {
+        builder.WebHost.UseUrls("http://0.0.0.0:5000");
+    }
     // 显式补强配置加载（CreateApplicationBuilder 默认会加载，这里用于确保发布目录下也可读到）
     builder.Configuration
         .SetBasePath(AppContext.BaseDirectory)
@@ -63,7 +71,26 @@ try {
         c.BaseAddress = new Uri("http://172.16.4.108:8800");
         c.Timeout = TimeSpan.FromMilliseconds(2500);
     });
+    // ---------------------------
+    // SignalR：心跳/保活关键配置
+    // ---------------------------
+    builder.Services.AddSignalR(options => {
+        // 服务端向客户端发送 ping 的间隔（保持连接活跃）
+        options.KeepAliveInterval = TimeSpan.FromSeconds(10);
 
+        // 服务端允许客户端“多久没任何消息/心跳响应”才判定超时断开
+        // 需要大于 KeepAliveInterval；值越大越不容易被断开，但断线感知越慢
+        options.ClientTimeoutInterval = TimeSpan.FromMinutes(5);
+
+        // 握手超时（连接初期）
+        options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+
+        // 需要时再开，避免额外开销
+        // options.EnableDetailedErrors = false;
+    });
+
+    // 广播服务
+    builder.Services.AddSingleton<IPlcBridgeMessageBroadcaster, PlcBridgeMessageBroadcaster>();
     builder.Services.AddSingleton<IStateProtector, DpapiStateProtector>();
     builder.Services.AddSingleton<FileUsageStateStore>();
     builder.Services.AddSingleton<RegistryUsageStateStore>();
@@ -82,7 +109,7 @@ try {
 
     //builder.Services.AddHostedService<UsageLimitHostedService>();
 #if !DEBUG
-                builder.Services.AddWindowsService();
+    builder.Host.UseWindowsService();
 #endif
     var host = builder.Build();
     // 添加全局异常处理器以防止崩溃
@@ -95,7 +122,7 @@ try {
         logger.Fatal(args.Exception, "未观察到的任务异常");
         args.SetObserved(); // 防止程序崩溃
     };
-
+    host.MapHub<PlcBridgeHub>("/hub/plcbridge");
     host.Run();
 }
 catch (Exception e) {

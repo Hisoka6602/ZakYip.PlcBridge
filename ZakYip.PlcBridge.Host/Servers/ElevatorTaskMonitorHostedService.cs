@@ -10,7 +10,10 @@ using Microsoft.Extensions.Options;
 using ZakYip.PlcBridge.Core.Models;
 using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Options;
+using ZakYip.PlcBridge.Core.SignalR;
 using ZakYip.PlcBridge.Core.Utilities;
+using ZakYip.PlcBridge.Ingress.SignalR;
+using ZakYip.PlcBridge.Core.Models.SignalR;
 using ZakYip.PlcBridge.Core.Models.Elevator;
 
 namespace ZakYip.PlcBridge.Host.Servers {
@@ -20,20 +23,24 @@ namespace ZakYip.PlcBridge.Host.Servers {
         private readonly SafeExecutor _safeExecutor;
         private readonly IElevatorApiClient _elevatorApiClient;
         private readonly IPlcManager _plcManager;
+        private readonly IPlcBridgeMessageBroadcaster _plcBridgeMessageBroadcaster;
         private readonly IOptionsMonitor<ElevatorHandshakeDbOptions> _options;
         private int _queryExecutableSignalBitOffset = 0;
         private int _queryExecutableSignalByteOffset = 0;
         private bool _isQueryExecutable = false;
+        private static int _invokeHandlersRegistered;
 
         public ElevatorTaskMonitorHostedService(ILogger<ElevatorTaskMonitorHostedService> logger,
             SafeExecutor safeExecutor,
             IElevatorApiClient elevatorApiClient,
             IPlcManager plcManager,
+            IPlcBridgeMessageBroadcaster plcBridgeMessageBroadcaster,
             IOptionsMonitor<ElevatorHandshakeDbOptions> options) {
             _logger = logger;
             _safeExecutor = safeExecutor;
             _elevatorApiClient = elevatorApiClient;
             _plcManager = plcManager;
+            _plcBridgeMessageBroadcaster = plcBridgeMessageBroadcaster;
             _options = options;
 
             _plcManager.DbBoolsChanged += (sender, args) => {
@@ -47,6 +54,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
                 _isQueryExecutable = plcDbBoolChange.NewState == PlcIoSignalState.High;
             };
+            RegisterPlcBridgeInvokeHandlersOnce();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -96,6 +104,8 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems, stoppingToken);
                                 _logger.LogInformation($"更改电梯到位信号为高");
                                 ElevatorRuntimeState.ClearErpGuid();
+                                await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorArrived,
+                                     JsonConvert.SerializeObject(elevatorApiResult), stoppingToken);
                             }
                         }
                     }
@@ -107,6 +117,46 @@ namespace ZakYip.PlcBridge.Host.Servers {
             }
 
             Console.WriteLine("跳出循环");
+        }
+
+        private void RegisterPlcBridgeInvokeHandlersOnce() {
+            if (Interlocked.Exchange(ref _invokeHandlersRegistered, 1) == 1) {
+                return;
+            }
+
+            // 示例：呼叫电梯（命令名建议放常量里，例如 HubMethodNames.CallElevator）
+            PlcBridgeHub.RegisterInvokeHandler("PushProductionOrder", async (sp, connectionId, req, ct) => {
+                try {
+                    var productionOrderPushRequest = JsonConvert.DeserializeObject<ProductionOrderPushRequest>(req?.ToString() ?? throw new InvalidOperationException());
+
+                    var api = sp.GetRequiredService<IElevatorApiClient>();
+
+                    var pushProductionOrderAsync = await api.PushProductionOrderAsync(productionOrderPushRequest ?? throw new InvalidOperationException(), ct);
+
+                    return new InvokeAckResponse {
+                        IsSuccess = pushProductionOrderAsync.IsSuccess,
+                        Payload = new { IsOk = pushProductionOrderAsync.IsSuccess, ConnectionId = connectionId },
+                        ErrorMessage = pushProductionOrderAsync.IsSuccess ? null : pushProductionOrderAsync.ErrorMessage,
+                        RespondedAt = DateTimeOffset.Now
+                    };
+                }
+                catch (OperationCanceledException) {
+                    return new InvokeAckResponse {
+                        IsSuccess = false,
+                        Payload = null,
+                        ErrorMessage = "请求已取消。",
+                        RespondedAt = DateTimeOffset.Now
+                    };
+                }
+                catch (Exception ex) {
+                    return new InvokeAckResponse {
+                        IsSuccess = false,
+                        Payload = null,
+                        ErrorMessage = ex.Message,
+                        RespondedAt = DateTimeOffset.Now
+                    };
+                }
+            });
         }
     }
 }

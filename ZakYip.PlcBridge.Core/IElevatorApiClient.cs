@@ -38,5 +38,12 @@ namespace ZakYip.PlcBridge.Core {
         ValueTask<ElevatorApiResult> QueryTaskAsync(
             ElevatorTaskQueryRequest request,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 推送生产订单信息
+        /// </summary>
+        ValueTask<ElevatorApiResult> PushProductionOrderAsync(
+            ProductionOrderPushRequest request,
+            CancellationToken cancellationToken = default);
     }
 }

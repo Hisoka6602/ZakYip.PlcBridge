@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Prism.Regions;
 using Prism.Commands;
+using System.Windows;
 using ToastNotifications;
 using System.Windows.Input;
 using System.Security.Policy;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Models;
+using ZakYip.PlcBridge.Client.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
@@ -18,6 +20,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
     public class MainWindowViewModel : BindableBase {
         private readonly Notifier _notifier;
         private readonly IRegionManager _regionManager;
+        private readonly ISignalRMessageClient _signalRMessageClient;
         private readonly IMemoryCache _memoryCache;
 
         private ProductionOrderModel _productionOrder = new() {
@@ -100,23 +103,38 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         }
 
         public MainWindowViewModel(Notifier notifier, IRegionManager regionManager,
+            ISignalRMessageClient signalRMessageClient,
             IMemoryCache memoryCache) {
             _notifier = notifier;
             _regionManager = regionManager;
+            _signalRMessageClient = signalRMessageClient;
             _memoryCache = memoryCache;
+            _signalRMessageClient.ConnectionStatusChanged += async (sender, args) => {
+                await Application.Current.Dispatcher.InvokeAsync(() => {
+                    SignalRConnectionStatus = args.CurrentStatus;
+                });
+            };
+            _signalRMessageClient.MessageReceived += (sender, args) => {
+            };
         }
 
         public ICommand LoadedCommand => new DelegateCommand<object>(LoadedDelegate);
 
-        private async void LoadedDelegate(object obj) {
-            await Task.Delay(10000);
-            IsLoading = false;
+        private void LoadedDelegate(object obj) {
+            Task.Run(async () => {
+                await _signalRMessageClient.ConnectAsync();
+                await Task.Delay(1500);
+                await Application.Current.Dispatcher.InvokeAsync(() => {
+                    IsLoading = false;
+                });
+            });
         }
 
         public ICommand CloseWinCommand => new DelegateCommand<object>(CloseWinDelegate);
 
         private async void CloseWinDelegate(object obj) {
             //关闭通知
+
             await Task.Delay(1600);
             System.Windows.Application.Current.Shutdown();//关闭
         }
@@ -126,18 +144,28 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         /// </summary>
         public ICommand PushProductionInfoCommand => new DelegateCommand<object>(PushProductionInfoDelegate);
 
-        private async void PushProductionInfoDelegate(object payload) {
+        private void PushProductionInfoDelegate(object payload) {
             if (IsPushing) return;
             IsPushing = true;
-            Console.WriteLine(ProductionOrder);
-            Console.WriteLine($"推送生产信息");
-            await Task.Delay(5000);
+            Task.Run(async () => {
+                var signalRInvokeResponse =
+                    await _signalRMessageClient.InvokeAsync("PushProductionOrder", ProductionOrder);
+                await Application.Current.Dispatcher.InvokeAsync(async () => {
+                    IsPushing = false;
+                    if (signalRInvokeResponse.IsSuccess) {
+                        OperationResultStatus = Enums.OperationResultStatus.Success;
+                        await Task.Delay(2000);
+                    }
+                    else {
+                        OperationResultStatus = Enums.OperationResultStatus.Failure;
+                        await Task.Delay(4000);
+                    }
 
-            IsPushing = false;
-            OperationResultStatus = Enums.OperationResultStatus.Failure;
+                    OperationResultStatus = null;
 
-            await Task.Delay(4000);
-            OperationResultStatus = null;
+                    //标记失败、成功状态 2s 后重置为 null（即不显示任何状态）
+                });
+            });
         }
     }
 }
