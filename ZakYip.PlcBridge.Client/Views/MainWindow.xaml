@@ -429,7 +429,7 @@
                     MinHeight="40"
                     Margin="5,0,5,30"
                     VerticalAlignment="Bottom"
-                    Background="#5A32CD32"
+                    Background="{Binding PreviousProductionOrder.PushStatus, Converter={StaticResource EnumWinIconColorToBrushConverter}}"
                     CornerRadius="5"
                     Visibility="{Binding PreviousProductionOrder, Converter={StaticResource IsNotNullToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
                     <TextBlock
