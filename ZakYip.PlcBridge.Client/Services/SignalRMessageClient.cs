@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Events;
 using ZakYip.PlcBridge.Client.Options;
@@ -26,6 +27,7 @@ namespace ZakYip.PlcBridge.Client.Services {
 
         private int _isDisposed;
         private int _isInitialized;
+        private int _isBackgroundReconnectRunning;
 
         private volatile ConnectionStatus _connectionStatus = ConnectionStatus.Disconnected;
         private volatile string? _connectionId;
@@ -106,7 +108,8 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "SignalR 连接失败。");
-                SetStatus(ConnectionStatus.Faulted, reason: ex.Message);
+                SetStatus(ConnectionStatus.Disconnected, reason: ex.Message);
+                StartBackgroundReconnectLoop();
             }
         }
 
@@ -197,9 +200,19 @@ namespace ZakYip.PlcBridge.Client.Services {
                 _logger.LogWarning("SignalR Invoke 已取消。Method={MethodName}", methodName);
                 return CreateErrorInvokeResponse("请求已取消。");
             }
+            catch (HubException ex) {
+                _logger.LogError(ex, "SignalR Invoke 失败（服务端返回异常）。Method={MethodName}", methodName);
+                return CreateErrorInvokeResponse(ex.Message);
+            }
             catch (Exception ex) {
                 _logger.LogError(ex, "SignalR Invoke 失败。Method={MethodName}", methodName);
-                SetStatus(ConnectionStatus.Faulted, reason: ex.Message);
+                if (conn.State == HubConnectionState.Connected) {
+                    SetStatus(ConnectionStatus.Connected, reason: null);
+                }
+                else {
+                    SetStatus(ConnectionStatus.Disconnected, reason: ex.Message);
+                    StartBackgroundReconnectLoop();
+                }
 
                 return CreateErrorInvokeResponse(ex.Message);
             }
@@ -281,8 +294,9 @@ namespace ZakYip.PlcBridge.Client.Services {
                     _logger.LogInformation("SignalR 连接已关闭。");
                 }
                 else {
-                    SetStatus(ConnectionStatus.Faulted, ex.Message);
+                    SetStatus(ConnectionStatus.Disconnected, ex.Message);
                     _logger.LogError(ex, "SignalR 连接异常关闭。");
+                    StartBackgroundReconnectLoop();
                 }
 
                 return Task.CompletedTask;
@@ -294,6 +308,66 @@ namespace ZakYip.PlcBridge.Client.Services {
             conn.On<string, string>("Receive", RaiseMessageReceived);
 
             _connection = conn;
+        }
+
+        private void StartBackgroundReconnectLoop() {
+            if (!IsAutoReconnectEnabled || Volatile.Read(ref _isDisposed) != 0) {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref _isBackgroundReconnectRunning, 1, 0) != 0) {
+                return;
+            }
+
+            _ = Task.Run(async () => {
+                var attempt = 0;
+                try {
+                    while (Volatile.Read(ref _isDisposed) == 0) {
+                        var conn = _connection;
+                        if (conn is null) {
+                            return;
+                        }
+
+                        if (conn.State == HubConnectionState.Connected) {
+                            _connectionId = conn.ConnectionId;
+                            SetStatus(ConnectionStatus.Connected, reason: null);
+                            return;
+                        }
+
+                        if (conn.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting) {
+                            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        SetStatus(ConnectionStatus.Connecting, reason: "正在重连服务端。");
+                        try {
+                            await conn.StartAsync().ConfigureAwait(false);
+                            _connectionId = conn.ConnectionId;
+                            SetStatus(ConnectionStatus.Connected, reason: null);
+                            _logger.LogInformation("SignalR 后台重连成功。ConnectionId={ConnectionId}", _connectionId);
+                            return;
+                        }
+                        catch (Exception ex) {
+                            attempt++;
+                            SetStatus(ConnectionStatus.Disconnected, reason: ex.Message);
+                            _logger.LogWarning(ex, "SignalR 后台重连失败，第 {Attempt} 次。", attempt);
+                            await Task.Delay(GetReconnectDelay(attempt)).ConfigureAwait(false);
+                        }
+                    }
+                }
+                finally {
+                    Interlocked.Exchange(ref _isBackgroundReconnectRunning, 0);
+                }
+            });
+        }
+
+        private static TimeSpan GetReconnectDelay(int attempt) {
+            return attempt switch {
+                <= 1 => TimeSpan.Zero,
+                2 => TimeSpan.FromSeconds(2),
+                3 => TimeSpan.FromSeconds(5),
+                _ => TimeSpan.FromSeconds(10)
+            };
         }
 
         private void SetStatus(ConnectionStatus status, string? reason) {
