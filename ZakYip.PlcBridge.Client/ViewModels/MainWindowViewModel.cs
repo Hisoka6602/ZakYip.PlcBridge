@@ -6,6 +6,7 @@ using Prism.Regions;
 using Prism.Commands;
 using System.Windows;
 using ToastNotifications;
+using ToastNotifications.Messages;
 using System.Windows.Input;
 using System.Security.Policy;
 using System.Threading.Tasks;
@@ -185,8 +186,12 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
 
         private async void CloseWinDelegate(object obj) {
             //关闭通知
-
-            await Task.Delay(1600);
+            try {
+                await _signalRMessageClient.DisconnectAsync();
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "关闭窗口前断开 SignalR 失败。");
+            }
             System.Windows.Application.Current.Shutdown();//关闭
         }
 
@@ -215,11 +220,15 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                         IsPushing = false;
                         if (signalRInvokeResponse.IsSuccess) {
                             OperationResultStatus = Enums.OperationResultStatus.Success;
+                            PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Success);
+                            _notifier.ShowSuccess($"工单[{ProductionOrder.WorkOrderNo}]推送成功。");
                             await Task.Delay(2000);
                         }
                         else {
                             _logger.LogError("推送生产信息失败：{ErrorMessage}", signalRInvokeResponse.ErrorMessage);
                             OperationResultStatus = Enums.OperationResultStatus.Failure;
+                            PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
+                            _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送失败：{signalRInvokeResponse.ErrorMessage}");
                             await Task.Delay(4000);
                         }
 
@@ -233,6 +242,8 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         IsPushing = false;
                         OperationResultStatus = Enums.OperationResultStatus.Failure;
+                        PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
+                        _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送异常。");
                     });
                     await Task.Delay(4000);
                     await Application.Current.Dispatcher.InvokeAsync(() => {
@@ -240,6 +251,16 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     });
                 }
             });
+        }
+
+        private ProductionOrderModel BuildPreviousProductionOrder(OperationResultStatus pushStatus) {
+            return new ProductionOrderModel {
+                WorkOrderNo = ProductionOrder.WorkOrderNo,
+                ItemCode = ProductionOrder.ItemCode,
+                BatchNo = ProductionOrder.BatchNo,
+                PlannedBoxCount = ProductionOrder.PlannedBoxCount,
+                PushStatus = pushStatus
+            };
         }
 
         private static ConnectionStatus ParseS7ConnectionStatus(string payloadJson) {
