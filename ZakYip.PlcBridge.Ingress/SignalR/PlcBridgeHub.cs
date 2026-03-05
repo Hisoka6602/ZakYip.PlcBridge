@@ -13,7 +13,6 @@ using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Enums;
 using ZakYip.PlcBridge.Core.Utilities;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace ZakYip.PlcBridge.Ingress.SignalR {
 
@@ -194,10 +193,17 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         }
 
         /// <summary>
-        /// 统一入口：客户端 InvokeAsync("Invoke", new { CommandName="xxx", Request=... })
+        /// 统一入口：客户端 InvokeAsync("InvokeCommand", new { CommandName="xxx", Request=... })
         /// 服务端按 CommandName 从注册表分发，并返回 InvokeAckResponse（含 Payload）。
         /// </summary>
-        public async Task<InvokeAckResponse> Invoke(InvokeEnvelope? request, CancellationToken cancellationToken = default) {
+        public Task<InvokeAckResponse> Invoke(InvokeEnvelope? request, CancellationToken cancellationToken = default) {
+            return InvokeCommand(request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Client -> Hub 统一命令调用入口。
+        /// </summary>
+        public async Task<InvokeAckResponse> InvokeCommand(InvokeEnvelope? request, CancellationToken cancellationToken = default) {
             if (request is null || string.IsNullOrWhiteSpace(request.CommandName)) {
                 return new InvokeAckResponse {
                     IsSuccess = false,
@@ -244,17 +250,6 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                     RespondedAt = DateTimeOffset.Now
                 };
             }
-        }
-
-        /// <summary>
-        /// Invoke 统一入口载荷。
-        /// </summary>
-        public sealed record class InvokeEnvelope {
-            [JsonPropertyName("commandName")]
-            public string? CommandName { get; init; }
-
-            [JsonPropertyName("request")]
-            public object? Request { get; init; }
         }
     }
 }
