@@ -315,9 +315,21 @@ namespace ZakYip.PlcBridge.Host.Servers {
                 _infeedDoneSignalBitOffset = infeedDoneSignal?.BitOffset ?? 0;
 
                 var initializeAsync = await _plcManager.InitializeAsync(stoppingToken);
-                if (!initializeAsync) {
-                    _logger.LogError("PLC初始化失败，电梯桥接服务无法启动");
-                    return;
+                var initializeRetryDelay = TimeSpan.FromSeconds(5);
+                while (!initializeAsync) {
+                    if (stoppingToken.IsCancellationRequested) {
+                        return;
+                    }
+
+                    _logger.LogWarning("PLC初始化失败，将在{RetryDelaySeconds}秒后重试连接", initializeRetryDelay.TotalSeconds);
+                    try {
+                        await Task.Delay(initializeRetryDelay, stoppingToken);
+                    }
+                    catch (OperationCanceledException) {
+                        return;
+                    }
+
+                    initializeAsync = await _plcManager.ReconnectAsync(stoppingToken);
                 }
                 var optionsList = _options.CurrentValue.Fields.
                     Where(w => w.ValueType == PlcDbValueType.Bool)
