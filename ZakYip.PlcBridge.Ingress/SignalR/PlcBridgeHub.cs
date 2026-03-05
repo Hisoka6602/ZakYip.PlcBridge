@@ -9,6 +9,10 @@ using System.Collections.Concurrent;
 using ZakYip.PlcBridge.Core.SignalR;
 using System.Text.RegularExpressions;
 using ZakYip.PlcBridge.Core.Models.SignalR;
+using ZakYip.PlcBridge.Core.Manager;
+using ZakYip.PlcBridge.Core.Enums;
+using ZakYip.PlcBridge.Core.Utilities;
+using System.Text.Json;
 
 namespace ZakYip.PlcBridge.Ingress.SignalR {
 
@@ -102,9 +106,33 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
             };
         }
 
-        public override Task OnConnectedAsync() {
+        public override async Task OnConnectedAsync() {
             _logger.LogInformation("连接建立。ConnectionId={ConnectionId}", Context.ConnectionId);
-            return base.OnConnectedAsync();
+
+            var client = Clients.Client(Context.ConnectionId);
+            var cancellationToken = Context.ConnectionAborted;
+
+            var plcManager = _serviceProvider.GetService(typeof(IPlcManager)) as IPlcManager;
+            var s7StatusPayload = plcManager is null
+                ? nameof(PlcStatus.Disconnected)
+                : plcManager.Status.ToString();
+
+            await client.Receive(HubMethodNames.NotifyS7ConnectionStatusChanged, s7StatusPayload, cancellationToken).ConfigureAwait(false);
+
+            var currentErpGuid = ElevatorRuntimeState.ErpGuid;
+            if (!string.IsNullOrWhiteSpace(currentErpGuid)) {
+                var callTaskPayloadJson = JsonSerializer.Serialize(new { erpGuid = currentErpGuid });
+                await client.Receive(HubMethodNames.NotifyElevatorCallRequested, callTaskPayloadJson, cancellationToken).ConfigureAwait(false);
+            }
+
+            var latestProgressTopic = ElevatorRuntimeState.LatestProgressTopic;
+            var latestProgressPayload = ElevatorRuntimeState.LatestProgressPayloadJson;
+            if (!string.IsNullOrWhiteSpace(latestProgressTopic) &&
+                !string.IsNullOrWhiteSpace(latestProgressPayload)) {
+                await client.Receive(latestProgressTopic, latestProgressPayload, cancellationToken).ConfigureAwait(false);
+            }
+
+            await base.OnConnectedAsync();
         }
 
         public override Task OnDisconnectedAsync(Exception? exception) {

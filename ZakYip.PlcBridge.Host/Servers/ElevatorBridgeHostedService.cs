@@ -213,6 +213,8 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorCallRequested,
                                  JsonConvert.SerializeObject(elevatorCallRequest));
+                            ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyElevatorCallRequested,
+                                JsonConvert.SerializeObject(elevatorCallRequest));
                         }
                     }
 
@@ -282,6 +284,8 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyFeedingCompleted,
+                                JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
+                            ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyFeedingCompleted,
                                 JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
                         }
                     }

@@ -13,9 +13,11 @@ using System.Collections.Generic;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Models;
 using ZakYip.PlcBridge.Client.Services;
+using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using ZakYip.PlcBridge.Core.Models.Elevator;
+using ZakYip.PlcBridge.Core.SignalR;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
 
@@ -119,7 +121,44 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     SignalRConnectionStatus = args.CurrentStatus;
                 });
             };
-            _signalRMessageClient.MessageReceived += (sender, args) => {
+            _signalRMessageClient.MessageReceived += async (sender, args) => {
+                var payloadJson = args.Payload?.ToString() ?? string.Empty;
+                try {
+                    switch (args.Topic) {
+                        case HubMethodNames.NotifyS7ConnectionStatusChanged:
+                            var s7ConnectionStatus = ParseS7ConnectionStatus(payloadJson);
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                S7ConnectionStatus = s7ConnectionStatus;
+                            });
+                            break;
+                        case HubMethodNames.NotifyElevatorCallRequested:
+                            var callTaskId = TryGetErpGuid(payloadJson, out var erpGuid)
+                                ? erpGuid
+                                : string.Empty;
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                if (!string.IsNullOrWhiteSpace(callTaskId)) {
+                                    CallTaskId = callTaskId;
+                                }
+                                ProductionProgress.MarkElevatorCalled();
+                                ProductionProgress.EnterWaitingElevatorArrive();
+                            });
+                            break;
+                        case HubMethodNames.NotifyElevatorArrived:
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                ProductionProgress.MarkElevatorArrived();
+                                ProductionProgress.EnterWaitingFeedingComplete();
+                            });
+                            break;
+                        case HubMethodNames.NotifyFeedingCompleted:
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                ProductionProgress.MarkFeedingCompleted();
+                            });
+                            break;
+                    }
+                }
+                catch (Exception ex) {
+                    _logger.LogError(ex, "处理 SignalR 消息失败。Topic={Topic}, Payload={PayloadJson}", args.Topic, payloadJson);
+                }
             };
         }
 
@@ -201,6 +240,50 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     });
                 }
             });
+        }
+
+        private static ConnectionStatus ParseS7ConnectionStatus(string payloadJson) {
+            if (Enum.TryParse<ConnectionStatus>(payloadJson, true, out var status)) {
+                return status;
+            }
+
+            if (payloadJson.Equals("Initializing", StringComparison.OrdinalIgnoreCase) ||
+                payloadJson.Equals("NotInitialized", StringComparison.OrdinalIgnoreCase)) {
+                return ConnectionStatus.Connecting;
+            }
+
+            return ConnectionStatus.Disconnected;
+        }
+
+        private static bool TryGetErpGuid(string payloadJson, out string erpGuid) {
+            erpGuid = string.Empty;
+            if (string.IsNullOrWhiteSpace(payloadJson)) {
+                return false;
+            }
+
+            try {
+                using var jsonDocument = JsonDocument.Parse(payloadJson);
+                var rootElement = jsonDocument.RootElement;
+                if (rootElement.ValueKind != JsonValueKind.Object) {
+                    return false;
+                }
+
+                if (rootElement.TryGetProperty("erpGuid", out var erpGuidProperty) ||
+                    rootElement.TryGetProperty("ErpGuid", out erpGuidProperty)) {
+                    var value = erpGuidProperty.GetString();
+                    if (string.IsNullOrWhiteSpace(value)) {
+                        return false;
+                    }
+
+                    erpGuid = value;
+                    return true;
+                }
+            }
+            catch (JsonException) {
+                return false;
+            }
+
+            return false;
         }
 
     }
