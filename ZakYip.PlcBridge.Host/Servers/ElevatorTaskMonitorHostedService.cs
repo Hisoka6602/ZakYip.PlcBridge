@@ -127,11 +127,32 @@ namespace ZakYip.PlcBridge.Host.Servers {
             // 示例：呼叫电梯（命令名建议放常量里，例如 HubMethodNames.CallElevator）
             PlcBridgeHub.RegisterInvokeHandler("PushProductionOrder", async (sp, connectionId, req, ct) => {
                 try {
-                    var productionOrderPushRequest = JsonConvert.DeserializeObject<ProductionOrderPushRequest>(req?.ToString() ?? throw new InvalidOperationException());
+                    if (req is null) {
+                        _logger.LogWarning("PushProductionOrder 请求为空。ConnectionId={ConnectionId}", connectionId);
+                        return new InvokeAckResponse {
+                            IsSuccess = false,
+                            Payload = null,
+                            ErrorMessage = "请求内容为空。",
+                            RespondedAt = DateTimeOffset.Now
+                        };
+                    }
+
+                    var requestJson = req.ToString();
+                    var productionOrderPushRequest = JsonConvert.DeserializeObject<ProductionOrderPushRequest>(requestJson!);
+                    if (productionOrderPushRequest is null) {
+                        _logger.LogWarning("PushProductionOrder 请求反序列化失败。ConnectionId={ConnectionId}, Request={RequestJson}",
+                            connectionId, requestJson);
+                        return new InvokeAckResponse {
+                            IsSuccess = false,
+                            Payload = null,
+                            ErrorMessage = "请求格式错误。",
+                            RespondedAt = DateTimeOffset.Now
+                        };
+                    }
 
                     var api = sp.GetRequiredService<IElevatorApiClient>();
 
-                    var pushProductionOrderAsync = await api.PushProductionOrderAsync(productionOrderPushRequest ?? throw new InvalidOperationException(), ct);
+                    var pushProductionOrderAsync = await api.PushProductionOrderAsync(productionOrderPushRequest, ct);
 
                     return new InvokeAckResponse {
                         IsSuccess = pushProductionOrderAsync.IsSuccess,
@@ -149,6 +170,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     };
                 }
                 catch (Exception ex) {
+                    _logger.LogError(ex, "PushProductionOrder 执行异常。ConnectionId={ConnectionId}", connectionId);
                     return new InvokeAckResponse {
                         IsSuccess = false,
                         Payload = null,

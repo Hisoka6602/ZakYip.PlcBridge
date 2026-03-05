@@ -10,6 +10,7 @@ using ToastNotifications;
 using System.Configuration;
 using System.Windows.Media;
 using System.Windows.Interop;
+using NLog;
 using NLog.Extensions.Logging;
 using ToastNotifications.Lifetime;
 using ToastNotifications.Position;
@@ -30,6 +31,8 @@ namespace ZakYip.PlcBridge.Client {
     /// Interaction logic for App.xaml
     /// </summary>
     public partial class App : PrismApplication {
+        private static readonly Logger StartupLogger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+        private LogCleanupService? _logCleanupService;
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry) {
             //注册提示控件
@@ -62,16 +65,19 @@ namespace ZakYip.PlcBridge.Client {
                 // 日志：只使用 NLog Provider
                 services.AddLogging(logging => {
                     logging.ClearProviders();
-                    logging.SetMinimumLevel(LogLevel.Information);
+                    logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
                     logging.AddNLog(configuration);
                 });
 
                 // 从 IConfiguration 手工读取 SignalRConnectionOptions（不使用 Binder）
                 var signalROptions = SignalRConnectionOptionsFactory.Create(configuration);
                 services.AddSingleton(signalROptions);
+                var logCleanupOptions = LogCleanupOptionsFactory.Create(configuration);
+                services.AddSingleton(logCleanupOptions);
 
                 // SignalR Client：单例复用连接
                 services.AddSingleton<ISignalRMessageClient, SignalRMessageClient>();
+                services.AddSingleton<LogCleanupService>();
             });
         }
 
@@ -82,17 +88,46 @@ namespace ZakYip.PlcBridge.Client {
         }
 
         protected override void OnStartup(StartupEventArgs e) {
+            DispatcherUnhandledException += (_, args) => {
+                StartupLogger.Error(args.Exception, "UI 线程未处理异常。");
+            };
+            AppDomain.CurrentDomain.UnhandledException += (_, args) => {
+                StartupLogger.Fatal(args.ExceptionObject as Exception, "非 UI 线程未处理异常。");
+            };
+            TaskScheduler.UnobservedTaskException += (_, args) => {
+                StartupLogger.Fatal(args.Exception, "未观察到的任务异常。");
+                args.SetObserved();
+            };
+
             RenderOptions.ProcessRenderMode = RenderMode.Default;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             ThreadPool.SetMinThreads(100, 200);
             //小数点问题
             FrameworkCompatibilityPreferences.KeepTextBoxDisplaySynchronizedWithTextProperty = false;
             base.OnStartup(e);
+
+            _logCleanupService = Container.Resolve<LogCleanupService>();
+            _logCleanupService.Start();
         }
 
         protected override void ConfigureViewModelLocator() {
             base.ConfigureViewModelLocator();
             ViewModelLocationProvider.Register<MainWindow, MainWindowViewModel>();
+        }
+
+        protected override async void OnExit(ExitEventArgs e) {
+            try {
+                if (_logCleanupService is not null) {
+                    await _logCleanupService.StopAsync();
+                }
+            }
+            catch (Exception ex) {
+                StartupLogger.Error(ex, "应用退出时停止日志清理服务失败。");
+            }
+            finally {
+                LogManager.Shutdown();
+                base.OnExit(e);
+            }
         }
     }
 }
