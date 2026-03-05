@@ -97,7 +97,7 @@ namespace ZakYip.PlcBridge.Client.Services {
                 return;
             }
 
-            var cutoffDate = DateTime.Now.AddDays(-_options.RetentionDays);
+            var cutoffDate = DateTime.UtcNow.AddDays(-_options.RetentionDays);
             var (deletedCount, failedCount) = await CleanupDirectoryAsync(logDirectory, cutoffDate).ConfigureAwait(false);
 
             var archiveDirectory = Path.Combine(logDirectory, "archives");
@@ -118,7 +118,7 @@ namespace ZakYip.PlcBridge.Client.Services {
                 foreach (var file in Directory.GetFiles(directory, "*.log")) {
                     try {
                         var fileInfo = new FileInfo(file);
-                        if (fileInfo.LastWriteTime < cutoffDate) {
+                        if (fileInfo.LastWriteTimeUtc < cutoffDate) {
                             fileInfo.Delete();
                             deletedCount++;
                         }
