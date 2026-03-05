@@ -302,7 +302,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
             _plcManager.StatusChanged += async (sender, args) => {
                 _logger.LogInformation($"PLC连接状态变更:旧状态-{args.OldStatus},新状态-{args.NewStatus}");
                 await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyS7ConnectionStatusChanged,
-                    nameof(args.NewStatus));
+                    args.NewStatus.ToString());
             };
         }
 
