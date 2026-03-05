@@ -208,7 +208,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             Task.Run(async () => {
                 try {
                     var signalRInvokeResponse =
-                        await _signalRMessageClient.InvokeAsync("Invoke", new {
+                        await _signalRMessageClient.InvokeAsync("InvokeCommand", new {
                             CommandName = "PushProductionOrder",
                             Request = new ProductionOrderPushRequest {
                                 WorkOrderNo = ProductionOrder.WorkOrderNo,

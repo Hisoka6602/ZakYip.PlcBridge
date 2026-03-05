@@ -31,6 +31,11 @@ namespace ZakYip.PlcBridge.Core.SignalR {
         /// </summary>
         public const string Unsubscribe = "Unsubscribe";
 
+        /// <summary>
+        /// Client -> Hub：统一命令调用入口。
+        /// </summary>
+        public const string InvokeCommand = "InvokeCommand";
+
         // ---------------------------
         // Hub -> Client：业务事件推送（建议使用 Notify 前缀）
         // ---------------------------
