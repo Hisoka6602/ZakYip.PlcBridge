@@ -6,6 +6,7 @@ using Prism.Regions;
 using Prism.Commands;
 using System.Windows;
 using ToastNotifications;
+using ToastNotifications.Messages;
 using System.Windows.Input;
 using System.Security.Policy;
 using System.Threading.Tasks;
@@ -13,13 +14,19 @@ using System.Collections.Generic;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Models;
 using ZakYip.PlcBridge.Client.Services;
+using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using ZakYip.PlcBridge.Core.Models.Elevator;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
 
     public class MainWindowViewModel : BindableBase {
+        private const string NotifyS7ConnectionStatusChanged = "NotifyS7ConnectionStatusChanged";
+        private const string NotifyElevatorCallRequested = "NotifyElevatorCallRequested";
+        private const string NotifyElevatorArrived = "NotifyElevatorArrived";
+        private const string NotifyFeedingCompleted = "NotifyFeedingCompleted";
+        private static readonly TimeSpan SuccessDisplayDuration = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan FailureDisplayDuration = TimeSpan.FromSeconds(4);
         private readonly Notifier _notifier;
         private readonly IRegionManager _regionManager;
         private readonly ISignalRMessageClient _signalRMessageClient;
@@ -119,7 +126,42 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     SignalRConnectionStatus = args.CurrentStatus;
                 });
             };
-            _signalRMessageClient.MessageReceived += (sender, args) => {
+            _signalRMessageClient.MessageReceived += async (sender, args) => {
+                var payloadJson = args.Payload?.ToString() ?? string.Empty;
+                try {
+                    switch (args.Topic) {
+                        case NotifyS7ConnectionStatusChanged:
+                            var s7ConnectionStatus = ParseS7ConnectionStatus(payloadJson);
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                S7ConnectionStatus = s7ConnectionStatus;
+                            });
+                            break;
+                        case NotifyElevatorCallRequested:
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                if (TryGetErpGuid(payloadJson, out var erpGuid) && !string.IsNullOrWhiteSpace(erpGuid)) {
+                                    CallTaskId = erpGuid;
+                                }
+                                ProductionProgress.MarkElevatorCalled();
+                                ProductionProgress.EnterWaitingElevatorArrive();
+                            });
+                            break;
+                        case NotifyElevatorArrived:
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                ProductionProgress.MarkElevatorArrived();
+                                ProductionProgress.EnterWaitingFeedingComplete();
+                            });
+                            break;
+                        case NotifyFeedingCompleted:
+                            await Application.Current.Dispatcher.InvokeAsync(() => {
+                                ProductionProgress.MarkFeedingCompleted();
+                                CallTaskId = string.Empty;
+                            });
+                            break;
+                    }
+                }
+                catch (Exception ex) {
+                    _logger.LogError(ex, "处理 SignalR 消息失败。Topic={Topic}, Payload={PayloadJson}", args.Topic, payloadJson);
+                }
             };
         }
 
@@ -146,8 +188,12 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
 
         private async void CloseWinDelegate(object obj) {
             //关闭通知
-
-            await Task.Delay(1600);
+            try {
+                await _signalRMessageClient.DisconnectAsync();
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "关闭窗口前断开 SignalR 失败，应用程序将继续关闭。");
+            }
             System.Windows.Application.Current.Shutdown();//关闭
         }
 
@@ -176,12 +222,16 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                         IsPushing = false;
                         if (signalRInvokeResponse.IsSuccess) {
                             OperationResultStatus = Enums.OperationResultStatus.Success;
-                            await Task.Delay(2000);
+                            PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Success);
+                            _notifier.ShowSuccess($"工单[{ProductionOrder.WorkOrderNo}]推送成功。");
+                            await Task.Delay(SuccessDisplayDuration);
                         }
                         else {
                             _logger.LogError("推送生产信息失败：{ErrorMessage}", signalRInvokeResponse.ErrorMessage);
                             OperationResultStatus = Enums.OperationResultStatus.Failure;
-                            await Task.Delay(4000);
+                            PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
+                            _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送失败：{signalRInvokeResponse.ErrorMessage}");
+                            await Task.Delay(FailureDisplayDuration);
                         }
 
                         OperationResultStatus = null;
@@ -194,13 +244,76 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         IsPushing = false;
                         OperationResultStatus = Enums.OperationResultStatus.Failure;
+                        PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
+                        _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送异常。");
                     });
-                    await Task.Delay(4000);
+                    await Task.Delay(FailureDisplayDuration);
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         OperationResultStatus = null;
                     });
                 }
             });
+        }
+
+        private ProductionOrderModel BuildPreviousProductionOrder(OperationResultStatus pushStatus) {
+            return new ProductionOrderModel {
+                WorkOrderNo = ProductionOrder.WorkOrderNo,
+                ItemCode = ProductionOrder.ItemCode,
+                BatchNo = ProductionOrder.BatchNo,
+                PlannedBoxCount = ProductionOrder.PlannedBoxCount,
+                PushStatus = pushStatus
+            };
+        }
+
+        private static ConnectionStatus ParseS7ConnectionStatus(string payloadJson) {
+            if (Enum.TryParse<ConnectionStatus>(payloadJson, true, out var status)) {
+                return status;
+            }
+
+            if (payloadJson.Equals("Initializing", StringComparison.OrdinalIgnoreCase) ||
+                payloadJson.Equals("NotInitialized", StringComparison.OrdinalIgnoreCase)) {
+                return ConnectionStatus.Connecting;
+            }
+
+            return ConnectionStatus.Disconnected;
+        }
+
+        private static bool TryGetErpGuid(string payloadJson, out string erpGuid) {
+            erpGuid = string.Empty;
+            if (string.IsNullOrWhiteSpace(payloadJson)) {
+                return false;
+            }
+
+            try {
+                using var jsonDocument = JsonDocument.Parse(payloadJson);
+                var rootElement = jsonDocument.RootElement;
+                if (rootElement.ValueKind != JsonValueKind.Object) {
+                    return false;
+                }
+
+                if (rootElement.TryGetProperty("erpGuid", out var erpGuidProperty) ||
+                    rootElement.TryGetProperty("ErpGuid", out erpGuidProperty)) {
+                    var value = erpGuidProperty.GetString();
+                    if (string.IsNullOrWhiteSpace(value)) {
+                        return false;
+                    }
+
+                    erpGuid = value;
+                    return true;
+                }
+            }
+            catch (JsonException) {
+                return false;
+            }
+
+            return false;
+        }
+
+        private sealed record ProductionOrderPushRequest {
+            public required string WorkOrderNo { get; init; }
+            public required string ItemCode { get; init; }
+            public string? BatchNo { get; init; }
+            public required int PlannedBoxCount { get; init; }
         }
 
     }

@@ -211,8 +211,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
 
+                            var elevatorCallPayloadJson = JsonConvert.SerializeObject(elevatorCallRequest);
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorCallRequested,
-                                 JsonConvert.SerializeObject(elevatorCallRequest));
+                                 elevatorCallPayloadJson);
+                            ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyElevatorCallRequested,
+                                elevatorCallPayloadJson);
                         }
                     }
 
@@ -281,8 +284,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems);
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
+                            var infeedDonePayloadJson = JsonConvert.SerializeObject(elevatorInfeedDoneRequest);
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyFeedingCompleted,
-                                JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
+                                infeedDonePayloadJson);
+                            ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyFeedingCompleted,
+                                infeedDonePayloadJson);
                         }
                     }
                 }, "PLC DB Bool 变化处理");
@@ -296,7 +302,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
             _plcManager.StatusChanged += async (sender, args) => {
                 _logger.LogInformation($"PLC连接状态变更:旧状态-{args.OldStatus},新状态-{args.NewStatus}");
                 await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyS7ConnectionStatusChanged,
-                    nameof(args.NewStatus));
+                    args.NewStatus.ToString());
             };
         }
 

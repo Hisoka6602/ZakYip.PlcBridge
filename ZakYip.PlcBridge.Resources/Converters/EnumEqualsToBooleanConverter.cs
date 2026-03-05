@@ -21,8 +21,8 @@ namespace ZakYip.PlcBridge.Resources.Converters {
                     return false;
                 }
 
-                var expected = ParseExpected(parameter);
-                var actual = ToInt64(value);
+                var expected = EnumConverterValueHelper.ParseLongParameter(parameter);
+                var actual = EnumConverterValueHelper.ToInt64(value);
 
                 return actual == expected;
             }
@@ -35,29 +35,6 @@ namespace ZakYip.PlcBridge.Resources.Converters {
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
             // 单向转换
             return Binding.DoNothing;
-        }
-
-        private static long ParseExpected(object? parameter) {
-            if (parameter is null) {
-                return 0;
-            }
-
-            if (parameter is string s) {
-                return long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
-            }
-
-            return System.Convert.ToInt64(parameter, CultureInfo.InvariantCulture);
-        }
-
-        private static long ToInt64(object value) {
-            var type = value.GetType();
-            if (type.IsEnum) {
-                var underlying = Enum.GetUnderlyingType(type);
-                var raw = System.Convert.ChangeType(value, underlying, CultureInfo.InvariantCulture);
-                return System.Convert.ToInt64(raw, CultureInfo.InvariantCulture);
-            }
-
-            return System.Convert.ToInt64(value, CultureInfo.InvariantCulture);
         }
     }
 }

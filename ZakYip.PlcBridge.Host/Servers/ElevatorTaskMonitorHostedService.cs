@@ -103,9 +103,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 };
                                 await _plcManager.WriteDbBoolsAsync(writeItems, stoppingToken);
                                 _logger.LogInformation($"更改电梯到位信号为高");
-                                ElevatorRuntimeState.ClearErpGuid();
+                                var payloadJson = JsonConvert.SerializeObject(elevatorApiResult);
                                 await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorArrived,
-                                     JsonConvert.SerializeObject(elevatorApiResult), stoppingToken);
+                                     payloadJson, stoppingToken);
+                                ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyElevatorArrived, payloadJson);
+                                ElevatorRuntimeState.ClearErpGuid();
                             }
                         }
                     }

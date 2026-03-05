@@ -149,22 +149,12 @@ namespace ZakYip.PlcBridge.Client.Services {
             ThrowIfDisposed();
 
             if (string.IsNullOrWhiteSpace(methodName)) {
-                return new SignalRInvokeResponse {
-                    IsSuccess = false,
-                    Payload = null,
-                    ErrorMessage = "Hub 方法名为空。",
-                    RespondedAt = DateTimeOffset.Now
-                };
+                return CreateErrorInvokeResponse("Hub 方法名为空。");
             }
 
             var conn = _connection;
             if (conn is null || _connectionStatus != ConnectionStatus.Connected) {
-                return new SignalRInvokeResponse {
-                    IsSuccess = false,
-                    Payload = null,
-                    ErrorMessage = "SignalR 未连接。",
-                    RespondedAt = DateTimeOffset.Now
-                };
+                return CreateErrorInvokeResponse("SignalR 未连接。");
             }
 
             try {
@@ -205,23 +195,13 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
             catch (OperationCanceledException) {
                 _logger.LogWarning("SignalR Invoke 已取消。Method={MethodName}", methodName);
-                return new SignalRInvokeResponse {
-                    IsSuccess = false,
-                    Payload = null,
-                    ErrorMessage = "请求已取消。",
-                    RespondedAt = DateTimeOffset.Now
-                };
+                return CreateErrorInvokeResponse("请求已取消。");
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "SignalR Invoke 失败。Method={MethodName}", methodName);
                 SetStatus(ConnectionStatus.Faulted, reason: ex.Message);
 
-                return new SignalRInvokeResponse {
-                    IsSuccess = false,
-                    Payload = null,
-                    ErrorMessage = ex.Message,
-                    RespondedAt = DateTimeOffset.Now
-                };
+                return CreateErrorInvokeResponse(ex.Message);
             }
         }
 
@@ -436,6 +416,15 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
 
             return true;
+        }
+
+        private static SignalRInvokeResponse CreateErrorInvokeResponse(string errorMessage) {
+            return new SignalRInvokeResponse {
+                IsSuccess = false,
+                Payload = null,
+                ErrorMessage = errorMessage,
+                RespondedAt = DateTimeOffset.Now
+            };
         }
 
         private static string SerializeAsJson(object? value) {
