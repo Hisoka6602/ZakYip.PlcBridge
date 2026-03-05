@@ -125,11 +125,11 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                 await client.Receive(HubMethodNames.NotifyElevatorCallRequested, callTaskPayloadJson, cancellationToken).ConfigureAwait(false);
             }
 
-            var latestProgressTopic = ElevatorRuntimeState.LatestProgressTopic;
-            var latestProgressPayload = ElevatorRuntimeState.LatestProgressPayloadJson;
-            if (!string.IsNullOrWhiteSpace(latestProgressTopic) &&
-                !string.IsNullOrWhiteSpace(latestProgressPayload)) {
-                await client.Receive(latestProgressTopic, latestProgressPayload, cancellationToken).ConfigureAwait(false);
+            var latestProgress = ElevatorRuntimeState.LatestProgressSnapshot;
+            if (latestProgress is { } progressSnapshot &&
+                !string.IsNullOrWhiteSpace(progressSnapshot.Topic) &&
+                !string.IsNullOrWhiteSpace(progressSnapshot.PayloadJson)) {
+                await client.Receive(progressSnapshot.Topic, progressSnapshot.PayloadJson, cancellationToken).ConfigureAwait(false);
             }
 
             await base.OnConnectedAsync();

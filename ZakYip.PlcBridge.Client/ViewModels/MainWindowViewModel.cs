@@ -132,12 +132,9 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                             });
                             break;
                         case HubMethodNames.NotifyElevatorCallRequested:
-                            var callTaskId = TryGetErpGuid(payloadJson, out var erpGuid)
-                                ? erpGuid
-                                : string.Empty;
                             await Application.Current.Dispatcher.InvokeAsync(() => {
-                                if (!string.IsNullOrWhiteSpace(callTaskId)) {
-                                    CallTaskId = callTaskId;
+                                if (TryGetErpGuid(payloadJson, out var erpGuid) && !string.IsNullOrWhiteSpace(erpGuid)) {
+                                    CallTaskId = erpGuid;
                                 }
                                 ProductionProgress.MarkElevatorCalled();
                                 ProductionProgress.EnterWaitingElevatorArrive();
@@ -152,6 +149,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                         case HubMethodNames.NotifyFeedingCompleted:
                             await Application.Current.Dispatcher.InvokeAsync(() => {
                                 ProductionProgress.MarkFeedingCompleted();
+                                CallTaskId = string.Empty;
                             });
                             break;
                     }

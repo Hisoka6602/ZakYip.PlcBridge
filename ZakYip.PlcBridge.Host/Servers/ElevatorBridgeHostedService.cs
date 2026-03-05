@@ -211,10 +211,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
 
+                            var elevatorCallPayloadJson = JsonConvert.SerializeObject(elevatorCallRequest);
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorCallRequested,
-                                 JsonConvert.SerializeObject(elevatorCallRequest));
+                                 elevatorCallPayloadJson);
                             ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyElevatorCallRequested,
-                                JsonConvert.SerializeObject(elevatorCallRequest));
+                                elevatorCallPayloadJson);
                         }
                     }
 
@@ -283,10 +284,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcManager.WriteDbBoolsAsync(writeItems);
                                 _logger.LogInformation($"更改电梯到位信号为低");
                             }
+                            var infeedDonePayloadJson = JsonConvert.SerializeObject(elevatorInfeedDoneRequest);
                             await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyFeedingCompleted,
-                                JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
+                                infeedDonePayloadJson);
                             ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyFeedingCompleted,
-                                JsonConvert.SerializeObject(elevatorInfeedDoneRequest));
+                                infeedDonePayloadJson);
                         }
                     }
                 }, "PLC DB Bool 变化处理");
