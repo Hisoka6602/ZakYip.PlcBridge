@@ -16,12 +16,14 @@ using ZakYip.PlcBridge.Client.Services;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using ZakYip.PlcBridge.Core.Models.Elevator;
-using ZakYip.PlcBridge.Core.SignalR;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
 
     public class MainWindowViewModel : BindableBase {
+        private const string NotifyS7ConnectionStatusChanged = "NotifyS7ConnectionStatusChanged";
+        private const string NotifyElevatorCallRequested = "NotifyElevatorCallRequested";
+        private const string NotifyElevatorArrived = "NotifyElevatorArrived";
+        private const string NotifyFeedingCompleted = "NotifyFeedingCompleted";
         private readonly Notifier _notifier;
         private readonly IRegionManager _regionManager;
         private readonly ISignalRMessageClient _signalRMessageClient;
@@ -125,13 +127,13 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                 var payloadJson = args.Payload?.ToString() ?? string.Empty;
                 try {
                     switch (args.Topic) {
-                        case HubMethodNames.NotifyS7ConnectionStatusChanged:
+                        case NotifyS7ConnectionStatusChanged:
                             var s7ConnectionStatus = ParseS7ConnectionStatus(payloadJson);
                             await Application.Current.Dispatcher.InvokeAsync(() => {
                                 S7ConnectionStatus = s7ConnectionStatus;
                             });
                             break;
-                        case HubMethodNames.NotifyElevatorCallRequested:
+                        case NotifyElevatorCallRequested:
                             await Application.Current.Dispatcher.InvokeAsync(() => {
                                 if (TryGetErpGuid(payloadJson, out var erpGuid) && !string.IsNullOrWhiteSpace(erpGuid)) {
                                     CallTaskId = erpGuid;
@@ -140,13 +142,13 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                                 ProductionProgress.EnterWaitingElevatorArrive();
                             });
                             break;
-                        case HubMethodNames.NotifyElevatorArrived:
+                        case NotifyElevatorArrived:
                             await Application.Current.Dispatcher.InvokeAsync(() => {
                                 ProductionProgress.MarkElevatorArrived();
                                 ProductionProgress.EnterWaitingFeedingComplete();
                             });
                             break;
-                        case HubMethodNames.NotifyFeedingCompleted:
+                        case NotifyFeedingCompleted:
                             await Application.Current.Dispatcher.InvokeAsync(() => {
                                 ProductionProgress.MarkFeedingCompleted();
                                 CallTaskId = string.Empty;
@@ -282,6 +284,13 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             }
 
             return false;
+        }
+
+        private sealed record ProductionOrderPushRequest {
+            public required string WorkOrderNo { get; init; }
+            public required string ItemCode { get; init; }
+            public string? BatchNo { get; init; }
+            public required int PlannedBoxCount { get; init; }
         }
 
     }

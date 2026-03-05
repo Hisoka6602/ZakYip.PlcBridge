@@ -24,7 +24,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ZakYip.PlcBridge.Core\ZakYip.PlcBridge.Core.csproj" />
 		<ProjectReference Include="..\ZakYip.PlcBridge.Resources\ZakYip.PlcBridge.Resources.csproj" />
 	</ItemGroup>
 

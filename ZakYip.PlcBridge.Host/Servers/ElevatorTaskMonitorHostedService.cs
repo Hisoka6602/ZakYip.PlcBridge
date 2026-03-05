@@ -107,6 +107,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 await _plcBridgeMessageBroadcaster.BroadcastAsync(HubMethodNames.NotifyElevatorArrived,
                                      payloadJson, stoppingToken);
                                 ElevatorRuntimeState.UpdateProgress(HubMethodNames.NotifyElevatorArrived, payloadJson);
+                                ElevatorRuntimeState.ClearErpGuid();
                             }
                         }
                     }
