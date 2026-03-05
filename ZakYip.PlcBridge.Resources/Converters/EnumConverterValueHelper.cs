@@ -3,15 +3,15 @@ using System.Globalization;
 
 namespace ZakYip.PlcBridge.Resources.Converters {
     internal static class EnumConverterValueHelper {
-        internal static long ParseLongParameter(object? parameter, long defaultValue = 0) {
+        internal static long ParseLongParameter(object? parameter) {
             if (parameter is null) {
-                return defaultValue;
+                return 0;
             }
 
             if (parameter is string s) {
                 return long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)
                     ? v
-                    : defaultValue;
+                    : 0;
             }
 
             return System.Convert.ToInt64(parameter, CultureInfo.InvariantCulture);
