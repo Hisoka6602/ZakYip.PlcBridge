@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 
@@ -41,16 +38,12 @@ namespace ZakYip.PlcBridge.Client.Options {
             // 只读取已知字段；其余字段按 Options 类型自行扩展
             var options = new SignalRConnectionOptions {
                 HubUrl = new Uri(hubUrlRaw, UriKind.Absolute),
-                IsAutoReconnectEnabled = TryGetBool(section["IsAutoReconnectEnabled"]),
+                IsAutoReconnectEnabled = OptionParsingHelper.ParseBool(section["IsAutoReconnectEnabled"]),
                 AccessToken = section["AccessToken"],
                 Headers = headers.Count == 0 ? null : headers
             };
 
             return options;
-        }
-
-        private static bool TryGetBool(string? value) {
-            return bool.TryParse(value, out var result) && result;
         }
     }
 }
