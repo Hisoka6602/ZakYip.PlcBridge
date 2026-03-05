@@ -47,30 +47,30 @@ ZakYip.PlcBridge.Resources/                  # 客户端资源层
 
 ---
 
-## 本次更新内容（2026-03-05）
-1. **修复客户端未命中 `Invoke` 断点问题**
-   - 新增 Hub 统一调用入口常量 `InvokeCommand`，避免继续依赖字符串硬编码。
-   - 服务端新增 `InvokeCommand` 方法作为统一命令入口，`Invoke` 保留为兼容转发入口。
-   - 客户端调用从 `"Invoke"` 调整为 `"InvokeCommand"`，避免因方法名歧义/绑定问题导致调用失败。
+## 本次更新内容（2026-03-06）
+1. **彻底修复 `InvokeCommand` 调用失败（参数绑定异常）**
+   - 将 `PlcBridgeHub` 面向客户端调用的方法签名改为**仅接收业务参数**（去除额外 `CancellationToken` 形参），避免 SignalR 在参数绑定阶段将调用判定为服务端异常。
+   - `InvokeCommand` 内部统一使用 `Context.ConnectionAborted` 作为取消令牌传递给命令处理器，既保留取消能力，也避免客户端参数个数不匹配。
+   - `Subscribe` / `Unsubscribe` / `Publish` 同步采用相同策略，消除同类隐患。
 
-2. **统一 Invoke 请求契约**
-   - 在 Core 新增 `InvokeEnvelope`，将命令请求信封下沉为共享模型，避免客户端与服务端定义漂移。
+2. **危险代码隔离策略保持一致**
+   - 高风险调用仍通过 Hub 内部保护性分发与 HostedService 注册处理器执行，异常统一收敛为 `InvokeAckResponse`，不向 UI 裸抛未处理异常。
 
-3. **危险代码隔离思路保持一致**
-   - 现有高风险逻辑（轮询与业务执行）继续通过 HostedService + 既有安全执行器模式承载；本次改动未引入额外裸奔高危调用。
+3. **文档同步更新**
+   - 依据本次修复同步维护 README 的更新记录、文件树职责与后续优化建议。
 
 ---
 
 ## 可继续完善内容
-1. **增强诊断能力**：
-   - 增加 Invoke 链路 TraceId，并在客户端/服务端日志中透传。
-   - 在 Host 中引入可配置 `EnableDetailedErrors`（仅开发环境开启）。
+1. **增强可观测性**：
+   - 在 `InvokeCommand` 日志中补充参数绑定失败场景的结构化字段（参数个数、方法签名、连接 ID）。
+   - 在客户端 UI 中区分“业务失败”与“调用契约失败”两类提示。
 
 2. **契约进一步收敛**：
-   - 将 `PushProductionOrder` 的 Request DTO 统一放入 Core，客户端直接复用，减少重复定义。
+   - 客户端 `MainWindowViewModel` 内部 `ProductionOrderPushRequest` 可替换为 Core 共享 DTO，减少重复模型。
 
 3. **自动化校验**：
-   - 补充针对 SignalR 命令入口的集成测试（Hub 调用 + Handler 分发 + 异常路径）。
+   - 增加 Hub 命令入口集成测试，覆盖参数绑定、取消令牌传递与异常兜底路径。
 
 4. **文档持续化**：
    - 后续每次变更继续维护本 README 的“本次更新内容”和“可继续完善内容”。
