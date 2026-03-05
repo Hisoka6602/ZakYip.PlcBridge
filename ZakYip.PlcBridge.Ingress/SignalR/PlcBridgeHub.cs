@@ -133,8 +133,8 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                     await client.Receive(progressSnapshot.Topic, progressSnapshot.PayloadJson, cancellationToken).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException ex) {
-                _logger.LogDebug(ex, "在初始状态推送期间连接已取消。ConnectionId={ConnectionId}", Context.ConnectionId);
+            catch (OperationCanceledException) {
+                _logger.LogDebug("在初始状态推送期间连接已取消。ConnectionId={ConnectionId}", Context.ConnectionId);
             }
             catch (Exception ex) {
                 _logger.LogWarning(ex, "在初始状态推送期间发生异常。ConnectionId={ConnectionId}", Context.ConnectionId);
