@@ -17,9 +17,13 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
     /// </summary>
     public sealed class PlcBridgeHub : Hub<IPlcBridgeClient> {
         private readonly ILogger<PlcBridgeHub> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
-        public PlcBridgeHub(ILogger<PlcBridgeHub> logger) {
+        public PlcBridgeHub(
+            ILogger<PlcBridgeHub> logger,
+            IServiceProvider serviceProvider) {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         /// <summary>
@@ -136,14 +140,6 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
 
         private static readonly ConcurrentDictionary<string, PlcBridgeInvokeHandler> Handlers
             = new(StringComparer.OrdinalIgnoreCase);
-
-        private readonly IServiceProvider? _serviceProvider;
-
-        public PlcBridgeHub(
-            ILogger<PlcBridgeHub> logger,
-            IServiceProvider serviceProvider) : this(logger) {
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        }
 
         /// <summary>
         /// 注册命令处理器（在 Program.cs 启动期调用一次即可）。
