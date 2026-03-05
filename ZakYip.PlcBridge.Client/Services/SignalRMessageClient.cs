@@ -206,10 +206,7 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "SignalR Invoke 失败。Method={MethodName}", methodName);
-                if (conn.State == HubConnectionState.Connected) {
-                    SetStatus(ConnectionStatus.Connected, reason: null);
-                }
-                else {
+                if (conn.State != HubConnectionState.Connected) {
                     SetStatus(ConnectionStatus.Disconnected, reason: ex.Message);
                     StartBackgroundReconnectLoop();
                 }
@@ -319,7 +316,7 @@ namespace ZakYip.PlcBridge.Client.Services {
                 return;
             }
 
-            _ = Task.Run(async () => {
+            var reconnectTask = Task.Run(async () => {
                 var attempt = 0;
                 try {
                     while (Volatile.Read(ref _isDisposed) == 0) {
@@ -359,6 +356,15 @@ namespace ZakYip.PlcBridge.Client.Services {
                     Interlocked.Exchange(ref _isBackgroundReconnectRunning, 0);
                 }
             });
+            _ = reconnectTask.ContinueWith(task => {
+                try {
+                    var exception = task.Exception?.GetBaseException() ?? task.Exception;
+                    _logger.LogError(exception, "SignalR 后台重连任务异常终止。");
+                }
+                catch {
+                    // 忽略日志处理异常，避免影响主流程
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         private static TimeSpan GetReconnectDelay(int attempt) {
