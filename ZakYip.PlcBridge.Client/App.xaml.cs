@@ -116,12 +116,18 @@ namespace ZakYip.PlcBridge.Client {
         }
 
         protected override async void OnExit(ExitEventArgs e) {
-            if (_logCleanupService is not null) {
-                await _logCleanupService.StopAsync();
+            try {
+                if (_logCleanupService is not null) {
+                    await _logCleanupService.StopAsync();
+                }
             }
-
-            LogManager.Shutdown();
-            base.OnExit(e);
+            catch (Exception ex) {
+                StartupLogger.Error(ex, "应用退出时停止日志清理服务失败。");
+            }
+            finally {
+                LogManager.Shutdown();
+                base.OnExit(e);
+            }
         }
     }
 }

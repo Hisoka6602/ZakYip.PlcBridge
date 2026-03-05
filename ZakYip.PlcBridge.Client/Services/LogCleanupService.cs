@@ -59,6 +59,9 @@ namespace ZakYip.PlcBridge.Client.Services {
             catch (OperationCanceledException) {
                 // ignore
             }
+            catch (Exception ex) {
+                _logger.LogError(ex, "客户端日志清理服务在停止时发生异常。");
+            }
             finally {
                 cts.Dispose();
             }
@@ -68,7 +71,12 @@ namespace ZakYip.PlcBridge.Client.Services {
             _logger.LogInformation("客户端日志清理服务已启动，保留天数: {RetentionDays}天，检查间隔: {CheckIntervalHours}小时",
                 _options.RetentionDays, _options.CheckIntervalHours);
 
-            await CleanupOldLogsAsync().ConfigureAwait(false);
+            try {
+                await CleanupOldLogsAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "客户端日志初始清理异常。");
+            }
 
             while (!cancellationToken.IsCancellationRequested) {
                 try {

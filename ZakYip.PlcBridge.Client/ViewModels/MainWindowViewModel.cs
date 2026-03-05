@@ -10,12 +10,12 @@ using System.Windows.Input;
 using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Models;
 using ZakYip.PlcBridge.Client.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using ZakYip.PlcBridge.Core.Models.Elevator;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
 
@@ -164,11 +164,11 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                     var signalRInvokeResponse =
                         await _signalRMessageClient.InvokeAsync("Invoke", new {
                             CommandName = "PushProductionOrder",
-                            Request = new PushProductionOrderRequest {
+                            Request = new ProductionOrderPushRequest {
                                 WorkOrderNo = ProductionOrder.WorkOrderNo,
                                 ItemCode = ProductionOrder.ItemCode,
                                 BatchNo = ProductionOrder.BatchNo,
-                                PlanQty = ProductionOrder.PlannedBoxCount
+                                PlannedBoxCount = ProductionOrder.PlannedBoxCount
                             }
                         });
 
@@ -203,18 +203,5 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             });
         }
 
-        private sealed record class PushProductionOrderRequest {
-            [JsonPropertyName("workOrderNo")]
-            public required string WorkOrderNo { get; init; }
-
-            [JsonPropertyName("itemCode")]
-            public required string ItemCode { get; init; }
-
-            [JsonPropertyName("batchNo")]
-            public string? BatchNo { get; init; }
-
-            [JsonPropertyName("PlanQty")]
-            public required int PlanQty { get; init; }
-        }
     }
 }
