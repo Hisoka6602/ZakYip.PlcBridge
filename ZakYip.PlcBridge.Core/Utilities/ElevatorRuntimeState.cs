@@ -52,7 +52,10 @@ namespace ZakYip.PlcBridge.Core.Utilities {
         /// <summary>
         /// 清空当前 ErpGuid。
         /// </summary>
-        public static void ClearErpGuid() => Volatile.Write(ref _erpGuid, null);
+        public static void ClearErpGuid() {
+            Volatile.Write(ref _erpGuid, null);
+            Volatile.Write(ref _latestProgress, null);
+        }
 
         private sealed record class ProgressSnapshot(string Topic, string PayloadJson);
     }

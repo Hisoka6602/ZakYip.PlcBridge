@@ -117,19 +117,27 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                 ? nameof(PlcStatus.Disconnected)
                 : plcManager.Status.ToString();
 
-            await client.Receive(HubMethodNames.NotifyS7ConnectionStatusChanged, s7StatusPayload, cancellationToken).ConfigureAwait(false);
+            try {
+                await client.Receive(HubMethodNames.NotifyS7ConnectionStatusChanged, s7StatusPayload, cancellationToken).ConfigureAwait(false);
 
-            var currentErpGuid = ElevatorRuntimeState.ErpGuid;
-            if (!string.IsNullOrWhiteSpace(currentErpGuid)) {
-                var callTaskPayloadJson = JsonSerializer.Serialize(new { erpGuid = currentErpGuid });
-                await client.Receive(HubMethodNames.NotifyElevatorCallRequested, callTaskPayloadJson, cancellationToken).ConfigureAwait(false);
+                var currentErpGuid = ElevatorRuntimeState.ErpGuid;
+                if (!string.IsNullOrWhiteSpace(currentErpGuid)) {
+                    var callTaskPayloadJson = JsonSerializer.Serialize(new { erpGuid = currentErpGuid });
+                    await client.Receive(HubMethodNames.NotifyElevatorCallRequested, callTaskPayloadJson, cancellationToken).ConfigureAwait(false);
+                }
+
+                var latestProgress = ElevatorRuntimeState.LatestProgressSnapshot;
+                if (latestProgress is { } progressSnapshot &&
+                    !string.IsNullOrWhiteSpace(progressSnapshot.Topic) &&
+                    !string.IsNullOrWhiteSpace(progressSnapshot.PayloadJson)) {
+                    await client.Receive(progressSnapshot.Topic, progressSnapshot.PayloadJson, cancellationToken).ConfigureAwait(false);
+                }
             }
-
-            var latestProgress = ElevatorRuntimeState.LatestProgressSnapshot;
-            if (latestProgress is { } progressSnapshot &&
-                !string.IsNullOrWhiteSpace(progressSnapshot.Topic) &&
-                !string.IsNullOrWhiteSpace(progressSnapshot.PayloadJson)) {
-                await client.Receive(progressSnapshot.Topic, progressSnapshot.PayloadJson, cancellationToken).ConfigureAwait(false);
+            catch (OperationCanceledException ex) {
+                _logger.LogDebug(ex, "在初始状态推送期间连接已取消。ConnectionId={ConnectionId}", Context.ConnectionId);
+            }
+            catch (Exception ex) {
+                _logger.LogWarning(ex, "在初始状态推送期间发生异常。ConnectionId={ConnectionId}", Context.ConnectionId);
             }
 
             await base.OnConnectedAsync();
