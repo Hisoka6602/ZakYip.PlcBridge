@@ -25,6 +25,8 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         private const string NotifyElevatorCallRequested = "NotifyElevatorCallRequested";
         private const string NotifyElevatorArrived = "NotifyElevatorArrived";
         private const string NotifyFeedingCompleted = "NotifyFeedingCompleted";
+        private static readonly TimeSpan SuccessDisplayDuration = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan FailureDisplayDuration = TimeSpan.FromSeconds(4);
         private readonly Notifier _notifier;
         private readonly IRegionManager _regionManager;
         private readonly ISignalRMessageClient _signalRMessageClient;
@@ -190,7 +192,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                 await _signalRMessageClient.DisconnectAsync();
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "关闭窗口前断开 SignalR 失败。");
+                _logger.LogError(ex, "关闭窗口前断开 SignalR 失败，应用程序将继续关闭。");
             }
             System.Windows.Application.Current.Shutdown();//关闭
         }
@@ -222,14 +224,14 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                             OperationResultStatus = Enums.OperationResultStatus.Success;
                             PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Success);
                             _notifier.ShowSuccess($"工单[{ProductionOrder.WorkOrderNo}]推送成功。");
-                            await Task.Delay(2000);
+                            await Task.Delay(SuccessDisplayDuration);
                         }
                         else {
                             _logger.LogError("推送生产信息失败：{ErrorMessage}", signalRInvokeResponse.ErrorMessage);
                             OperationResultStatus = Enums.OperationResultStatus.Failure;
                             PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
                             _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送失败：{signalRInvokeResponse.ErrorMessage}");
-                            await Task.Delay(4000);
+                            await Task.Delay(FailureDisplayDuration);
                         }
 
                         OperationResultStatus = null;
@@ -245,7 +247,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
                         PreviousProductionOrder = BuildPreviousProductionOrder(Enums.OperationResultStatus.Failure);
                         _notifier.ShowError($"工单[{ProductionOrder.WorkOrderNo}]推送异常。");
                     });
-                    await Task.Delay(4000);
+                    await Task.Delay(FailureDisplayDuration);
                     await Application.Current.Dispatcher.InvokeAsync(() => {
                         OperationResultStatus = null;
                     });
