@@ -149,7 +149,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             IsPushing = true;
             Task.Run(async () => {
                 var signalRInvokeResponse =
-                    await _signalRMessageClient.InvokeAsync("PushProductionOrder", ProductionOrder);
+                    await _signalRMessageClient.InvokeAsync("Invoke", new { CommandName = "PushProductionOrder", Request = ProductionOrder });
                 await Application.Current.Dispatcher.InvokeAsync(async () => {
                     IsPushing = false;
                     if (signalRInvokeResponse.IsSuccess) {
