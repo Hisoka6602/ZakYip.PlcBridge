@@ -314,13 +314,9 @@ namespace ZakYip.PlcBridge.Host.Servers {
                 _infeedDoneSignalByteOffset = infeedDoneSignal?.ByteOffset ?? 0;
                 _infeedDoneSignalBitOffset = infeedDoneSignal?.BitOffset ?? 0;
 
-                var initializeAsync = await _plcManager.InitializeAsync(stoppingToken);
+                var isInitialized = await _plcManager.InitializeAsync(stoppingToken);
                 var initializeRetryDelay = TimeSpan.FromSeconds(5);
-                while (!initializeAsync) {
-                    if (stoppingToken.IsCancellationRequested) {
-                        return;
-                    }
-
+                while (!isInitialized) {
                     _logger.LogWarning("PLC初始化失败，将在{RetryDelaySeconds}秒后重试连接", initializeRetryDelay.TotalSeconds);
                     try {
                         await Task.Delay(initializeRetryDelay, stoppingToken);
@@ -329,7 +325,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         return;
                     }
 
-                    initializeAsync = await _plcManager.ReconnectAsync(stoppingToken);
+                    isInitialized = await _plcManager.ReconnectAsync(stoppingToken);
                 }
                 var optionsList = _options.CurrentValue.Fields.
                     Where(w => w.ValueType == PlcDbValueType.Bool)
