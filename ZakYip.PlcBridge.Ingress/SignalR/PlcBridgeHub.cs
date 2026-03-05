@@ -13,6 +13,7 @@ using ZakYip.PlcBridge.Core.Manager;
 using ZakYip.PlcBridge.Core.Enums;
 using ZakYip.PlcBridge.Core.Utilities;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ZakYip.PlcBridge.Ingress.SignalR {
 
@@ -249,7 +250,10 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         /// Invoke 统一入口载荷。
         /// </summary>
         public sealed record class InvokeEnvelope {
-            public required string CommandName { get; init; }
+            [JsonPropertyName("commandName")]
+            public string? CommandName { get; init; }
+
+            [JsonPropertyName("request")]
             public object? Request { get; init; }
         }
     }
