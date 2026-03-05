@@ -13,8 +13,8 @@ namespace ZakYip.PlcBridge.Client.Options {
 
             return new LogCleanupOptions {
                 Enabled = OptionParsingHelper.ParseBool(section["Enabled"], defaultValue: true),
-                RetentionDays = OptionParsingHelper.ParsePositiveInt(section["RetentionDays"], defaultValue: 2),
-                CheckIntervalHours = OptionParsingHelper.ParsePositiveInt(section["CheckIntervalHours"], defaultValue: 1),
+                RetentionDays = OptionParsingHelper.ParsePositiveIntOrDefault(section["RetentionDays"], defaultValue: 2),
+                CheckIntervalHours = OptionParsingHelper.ParsePositiveIntOrDefault(section["CheckIntervalHours"], defaultValue: 1),
                 LogDirectory = section["LogDirectory"] ?? "logs"
             };
         }
