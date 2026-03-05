@@ -14,6 +14,7 @@ using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Models;
 using ZakYip.PlcBridge.Client.Services;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace ZakYip.PlcBridge.Client.ViewModels {
 
@@ -22,6 +23,7 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
         private readonly IRegionManager _regionManager;
         private readonly ISignalRMessageClient _signalRMessageClient;
         private readonly IMemoryCache _memoryCache;
+        private readonly ILogger<MainWindowViewModel> _logger;
 
         private ProductionOrderModel _productionOrder = new() {
             WorkOrderNo = string.Empty,
@@ -104,11 +106,13 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
 
         public MainWindowViewModel(Notifier notifier, IRegionManager regionManager,
             ISignalRMessageClient signalRMessageClient,
-            IMemoryCache memoryCache) {
+            IMemoryCache memoryCache,
+            ILogger<MainWindowViewModel> logger) {
             _notifier = notifier;
             _regionManager = regionManager;
             _signalRMessageClient = signalRMessageClient;
             _memoryCache = memoryCache;
+            _logger = logger;
             _signalRMessageClient.ConnectionStatusChanged += async (sender, args) => {
                 await Application.Current.Dispatcher.InvokeAsync(() => {
                     SignalRConnectionStatus = args.CurrentStatus;
@@ -122,11 +126,18 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
 
         private void LoadedDelegate(object obj) {
             Task.Run(async () => {
-                await _signalRMessageClient.ConnectAsync();
-                await Task.Delay(1500);
-                await Application.Current.Dispatcher.InvokeAsync(() => {
-                    IsLoading = false;
-                });
+                try {
+                    await _signalRMessageClient.ConnectAsync();
+                    await Task.Delay(1500);
+                }
+                catch (Exception ex) {
+                    _logger.LogError(ex, "主窗口加载时连接 SignalR 失败。");
+                }
+                finally {
+                    await Application.Current.Dispatcher.InvokeAsync(() => {
+                        IsLoading = false;
+                    });
+                }
             });
         }
 
@@ -148,23 +159,46 @@ namespace ZakYip.PlcBridge.Client.ViewModels {
             if (IsPushing) return;
             IsPushing = true;
             Task.Run(async () => {
-                var signalRInvokeResponse =
-                    await _signalRMessageClient.InvokeAsync("Invoke", new { CommandName = "PushProductionOrder", Request = ProductionOrder });
-                await Application.Current.Dispatcher.InvokeAsync(async () => {
-                    IsPushing = false;
-                    if (signalRInvokeResponse.IsSuccess) {
-                        OperationResultStatus = Enums.OperationResultStatus.Success;
-                        await Task.Delay(2000);
-                    }
-                    else {
+                try {
+                    var signalRInvokeResponse =
+                        await _signalRMessageClient.InvokeAsync("Invoke", new {
+                            CommandName = "PushProductionOrder",
+                            Request = new {
+                                workOrderNo = ProductionOrder.WorkOrderNo,
+                                itemCode = ProductionOrder.ItemCode,
+                                batchNo = ProductionOrder.BatchNo,
+                                PlanQty = ProductionOrder.PlannedBoxCount
+                            }
+                        });
+
+                    await Application.Current.Dispatcher.InvokeAsync(async () => {
+                        IsPushing = false;
+                        if (signalRInvokeResponse.IsSuccess) {
+                            OperationResultStatus = Enums.OperationResultStatus.Success;
+                            await Task.Delay(2000);
+                        }
+                        else {
+                            _logger.LogError("推送生产信息失败：{ErrorMessage}", signalRInvokeResponse.ErrorMessage);
+                            OperationResultStatus = Enums.OperationResultStatus.Failure;
+                            await Task.Delay(4000);
+                        }
+
+                        OperationResultStatus = null;
+
+                        //标记失败、成功状态 2s 后重置为 null（即不显示任何状态）
+                    });
+                }
+                catch (Exception ex) {
+                    _logger.LogError(ex, "推送生产信息异常。");
+                    await Application.Current.Dispatcher.InvokeAsync(() => {
+                        IsPushing = false;
                         OperationResultStatus = Enums.OperationResultStatus.Failure;
-                        await Task.Delay(4000);
-                    }
-
-                    OperationResultStatus = null;
-
-                    //标记失败、成功状态 2s 后重置为 null（即不显示任何状态）
-                });
+                    });
+                    await Task.Delay(4000);
+                    await Application.Current.Dispatcher.InvokeAsync(() => {
+                        OperationResultStatus = null;
+                    });
+                }
             });
         }
     }

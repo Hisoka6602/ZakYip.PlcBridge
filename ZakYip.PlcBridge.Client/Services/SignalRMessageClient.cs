@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ZakYip.PlcBridge.Client.Enums;
 using ZakYip.PlcBridge.Client.Events;
@@ -91,10 +92,12 @@ namespace ZakYip.PlcBridge.Client.Services {
             SetStatus(ConnectionStatus.Connecting, reason: null);
 
             try {
+                _logger.LogInformation("SignalR 开始连接：{HubUrl}", _options.HubUrl);
                 await conn.StartAsync(cancellationToken).ConfigureAwait(false);
 
                 _connectionId = conn.ConnectionId;
                 SetStatus(ConnectionStatus.Connected, reason: null);
+                _logger.LogInformation("SignalR 连接成功。ConnectionId={ConnectionId}", _connectionId);
             }
             catch (OperationCanceledException) {
                 // 取消属于预期流转
@@ -121,6 +124,7 @@ namespace ZakYip.PlcBridge.Client.Services {
 
             try {
                 await conn.StopAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("SignalR 已断开。");
             }
             catch (OperationCanceledException) {
                 throw;
@@ -164,6 +168,8 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
 
             try {
+                _logger.LogInformation("SignalR Invoke 请求。Method={MethodName}, Request={RequestJson}",
+                    methodName, SerializeAsJson(request));
                 object? result;
 
                 if (request is null) {
@@ -177,6 +183,8 @@ namespace ZakYip.PlcBridge.Client.Services {
 
                 // ✅ 关键：若服务端返回 InvokeAckResponse 形状，则以服务端 IsSuccess 为准
                 if (TryExtractInvokeAck(result, out var serverSuccess, out var serverPayload, out var serverErrorMessage, out var serverRespondedAt)) {
+                    _logger.LogInformation("SignalR Invoke 响应。Method={MethodName}, IsSuccess={IsSuccess}, Error={ErrorMessage}, Payload={PayloadJson}",
+                        methodName, serverSuccess, serverErrorMessage, SerializeAsJson(serverPayload));
                     return new SignalRInvokeResponse {
                         IsSuccess = serverSuccess,
                         Payload = serverPayload,
@@ -186,6 +194,8 @@ namespace ZakYip.PlcBridge.Client.Services {
                 }
 
                 // 兜底：若服务端没有返回标准应答结构，则认为调用成功，Payload=原始返回
+                _logger.LogInformation("SignalR Invoke 响应(非标准结构)。Method={MethodName}, Payload={PayloadJson}",
+                    methodName, SerializeAsJson(result));
                 return new SignalRInvokeResponse {
                     IsSuccess = true,
                     Payload = result,
@@ -194,6 +204,7 @@ namespace ZakYip.PlcBridge.Client.Services {
                 };
             }
             catch (OperationCanceledException) {
+                _logger.LogWarning("SignalR Invoke 已取消。Method={MethodName}", methodName);
                 return new SignalRInvokeResponse {
                     IsSuccess = false,
                     Payload = null,
@@ -271,12 +282,14 @@ namespace ZakYip.PlcBridge.Client.Services {
             conn.Reconnecting += ex => {
                 _connectionId = null;
                 SetStatus(ConnectionStatus.Connecting, ex?.Message);
+                _logger.LogWarning(ex, "SignalR 重连中。");
                 return Task.CompletedTask;
             };
 
             conn.Reconnected += connectionId => {
                 _connectionId = connectionId;
                 SetStatus(ConnectionStatus.Connected, reason: null);
+                _logger.LogInformation("SignalR 重连成功。ConnectionId={ConnectionId}", connectionId);
                 return Task.CompletedTask;
             };
 
@@ -285,9 +298,11 @@ namespace ZakYip.PlcBridge.Client.Services {
 
                 if (ex is null) {
                     SetStatus(ConnectionStatus.Disconnected, reason: null);
+                    _logger.LogInformation("SignalR 连接已关闭。");
                 }
                 else {
                     SetStatus(ConnectionStatus.Faulted, ex.Message);
+                    _logger.LogError(ex, "SignalR 连接异常关闭。");
                 }
 
                 return Task.CompletedTask;
@@ -336,6 +351,8 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
 
             try {
+                _logger.LogInformation("SignalR 接收消息。Topic={Topic}, Payload={PayloadJson}",
+                    topic, SerializeAsJson(payload));
                 handler.Invoke(this, new SignalRMessageReceivedEventArgs {
                     Topic = topic,
                     Payload = payload,
@@ -419,6 +436,19 @@ namespace ZakYip.PlcBridge.Client.Services {
             }
 
             return true;
+        }
+
+        private static string SerializeAsJson(object? value) {
+            try {
+                if (value is null) {
+                    return "null";
+                }
+
+                return JsonSerializer.Serialize(value);
+            }
+            catch {
+                return value?.ToString() ?? "null";
+            }
         }
 
         /// <summary>
