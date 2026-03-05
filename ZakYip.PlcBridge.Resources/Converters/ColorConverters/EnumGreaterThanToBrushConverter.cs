@@ -26,7 +26,7 @@ namespace ZakYip.PlcBridge.Resources.Converters.ColorConverters {
                 var (threshold, greaterBrush, elseBrush) = ParseParameter(parameter);
 
                 // 将 enum / 数值统一转为 long 比较，避免装箱后的类型分支
-                var numericValue = ToInt64(value);
+                var numericValue = EnumConverterValueHelper.ToInt64(value);
                 var result = numericValue > threshold ? greaterBrush : elseBrush;
 
                 // 尽量冻结，降低 WPF 渲染开销
@@ -69,16 +69,5 @@ namespace ZakYip.PlcBridge.Resources.Converters.ColorConverters {
             return brush ?? Brushes.Transparent;
         }
 
-        private static long ToInt64(object value) {
-            // enum 先转为 underlying 类型再转 long
-            var type = value.GetType();
-            if (type.IsEnum) {
-                var underlying = Enum.GetUnderlyingType(type);
-                var raw = System.Convert.ChangeType(value, underlying, CultureInfo.InvariantCulture);
-                return System.Convert.ToInt64(raw, CultureInfo.InvariantCulture);
-            }
-
-            return System.Convert.ToInt64(value, CultureInfo.InvariantCulture);
-        }
     }
 }
