@@ -35,7 +35,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         /// methodName = "Subscribe"
         /// request = topic(string)
         /// </summary>
-        public async Task<InvokeAckResponse> Subscribe(string topic, CancellationToken cancellationToken = default) {
+        public async Task<InvokeAckResponse> Subscribe(string topic) {
             if (string.IsNullOrWhiteSpace(topic)) {
                 return new InvokeAckResponse {
                     IsSuccess = false,
@@ -44,7 +44,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                 };
             }
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, topic, cancellationToken).ConfigureAwait(false);
+            await Groups.AddToGroupAsync(Context.ConnectionId, topic, Context.ConnectionAborted).ConfigureAwait(false);
 
             _logger.LogInformation("订阅成功。ConnectionId={ConnectionId}, Topic={Topic}", Context.ConnectionId, topic);
 
@@ -60,7 +60,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         /// methodName = "Unsubscribe"
         /// request = topic(string)
         /// </summary>
-        public async Task<InvokeAckResponse> Unsubscribe(string topic, CancellationToken cancellationToken = default) {
+        public async Task<InvokeAckResponse> Unsubscribe(string topic) {
             if (string.IsNullOrWhiteSpace(topic)) {
                 return new InvokeAckResponse {
                     IsSuccess = false,
@@ -69,7 +69,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
                 };
             }
 
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, topic, cancellationToken).ConfigureAwait(false);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, topic, Context.ConnectionAborted).ConfigureAwait(false);
 
             _logger.LogInformation("取消订阅成功。ConnectionId={ConnectionId}, Topic={Topic}", Context.ConnectionId, topic);
 
@@ -85,7 +85,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         /// methodName = "Publish"
         /// request = { topic, payloadJson }
         /// </summary>
-        public async Task<InvokeAckResponse> Publish(PublishRequest request, CancellationToken cancellationToken = default) {
+        public async Task<InvokeAckResponse> Publish(PublishRequest request) {
             if (string.IsNullOrWhiteSpace(request.Topic)) {
                 return new InvokeAckResponse {
                     IsSuccess = false,
@@ -97,7 +97,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
             var payloadJson = request.PayloadJson ?? string.Empty;
 
             // 默认：广播到该 Topic 分组（订阅模型）
-            await Clients.Group(request.Topic).Receive(request.Topic, payloadJson, cancellationToken).ConfigureAwait(false);
+            await Clients.Group(request.Topic).Receive(request.Topic, payloadJson, Context.ConnectionAborted).ConfigureAwait(false);
 
             return new InvokeAckResponse {
                 IsSuccess = true,
@@ -196,14 +196,14 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
         /// 统一入口：客户端 InvokeAsync("InvokeCommand", new { CommandName="xxx", Request=... })
         /// 服务端按 CommandName 从注册表分发，并返回 InvokeAckResponse（含 Payload）。
         /// </summary>
-        public Task<InvokeAckResponse> Invoke(InvokeEnvelope? request, CancellationToken cancellationToken = default) {
-            return InvokeCommand(request, cancellationToken);
+        public Task<InvokeAckResponse> Invoke(InvokeEnvelope? request) {
+            return InvokeCommand(request);
         }
 
         /// <summary>
         /// Client -> Hub 统一命令调用入口。
         /// </summary>
-        public async Task<InvokeAckResponse> InvokeCommand(InvokeEnvelope? request, CancellationToken cancellationToken = default) {
+        public async Task<InvokeAckResponse> InvokeCommand(InvokeEnvelope? request) {
             if (request is null || string.IsNullOrWhiteSpace(request.CommandName)) {
                 return new InvokeAckResponse {
                     IsSuccess = false,
@@ -223,7 +223,7 @@ namespace ZakYip.PlcBridge.Ingress.SignalR {
             }
 
             try {
-                var result = await handler(_serviceProvider, Context.ConnectionId, request.Request, cancellationToken)
+                var result = await handler(_serviceProvider, Context.ConnectionId, request.Request, Context.ConnectionAborted)
                     .ConfigureAwait(false);
 
                 // 兜底补全：handler 没填的字段由 Hub 补齐，避免返回不完整
