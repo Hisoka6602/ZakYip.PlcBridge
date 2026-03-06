@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Buffers;
 using System.Threading;
+using System.Text.Json;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using ZakYip.PlcBridge.Client.Enums;
@@ -448,22 +448,22 @@ namespace ZakYip.PlcBridge.Client.Services {
 
             // 形态 1：JsonElement
             if (result is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Object) {
-                if (!je.TryGetProperty("IsSuccess", out var isSuccessProp) || isSuccessProp.ValueKind is not System.Text.Json.JsonValueKind.True and not System.Text.Json.JsonValueKind.False) {
+                if (!je.TryGetProperty("isSuccess", out var isSuccessProp) || isSuccessProp.ValueKind is not System.Text.Json.JsonValueKind.True and not System.Text.Json.JsonValueKind.False) {
                     return false;
                 }
 
                 isSuccess = isSuccessProp.GetBoolean();
 
-                if (je.TryGetProperty("Payload", out var payloadProp)) {
+                if (je.TryGetProperty("payload", out var payloadProp)) {
                     // 保留 JsonElement，交由上层决定是否反序列化
                     payload = payloadProp;
                 }
 
-                if (je.TryGetProperty("ErrorMessage", out var errProp) && errProp.ValueKind == System.Text.Json.JsonValueKind.String) {
+                if (je.TryGetProperty("errorMessage", out var errProp) && errProp.ValueKind == System.Text.Json.JsonValueKind.String) {
                     errorMessage = errProp.GetString();
                 }
 
-                if (je.TryGetProperty("RespondedAt", out var timeProp) && timeProp.ValueKind == System.Text.Json.JsonValueKind.String) {
+                if (je.TryGetProperty("respondedAt", out var timeProp) && timeProp.ValueKind == System.Text.Json.JsonValueKind.String) {
                     if (DateTimeOffset.TryParse(timeProp.GetString(), out var dto)) {
                         respondedAt = dto;
                     }
@@ -475,22 +475,22 @@ namespace ZakYip.PlcBridge.Client.Services {
             // 形态 2：普通对象（反射读取属性）
             var type = result.GetType();
 
-            var isSuccessProperty = type.GetProperty("IsSuccess");
+            var isSuccessProperty = type.GetProperty("isSuccess");
             if (isSuccessProperty?.PropertyType != typeof(bool)) {
                 return false;
             }
 
             isSuccess = (bool)isSuccessProperty.GetValue(result)!;
 
-            var payloadProperty = type.GetProperty("Payload");
+            var payloadProperty = type.GetProperty("payload");
             payload = payloadProperty?.GetValue(result);
 
-            var errorProperty = type.GetProperty("ErrorMessage");
+            var errorProperty = type.GetProperty("errorMessage");
             if (errorProperty?.PropertyType == typeof(string)) {
                 errorMessage = (string?)errorProperty.GetValue(result);
             }
 
-            var respondedAtProperty = type.GetProperty("RespondedAt");
+            var respondedAtProperty = type.GetProperty("respondedAt");
             if (respondedAtProperty?.PropertyType == typeof(DateTimeOffset)) {
                 respondedAt = (DateTimeOffset?)respondedAtProperty.GetValue(result);
             }

@@ -178,7 +178,7 @@ namespace ZakYip.PlcBridge.Ingress {
             var isOk = IsEnvelopeSuccess(env);
             var errMsg = env.ErrMsg ?? (isOk ? null : $"生产订单推送失败，ErrCode={env.ErrCode ?? "null"}");
 
-            return new ElevatorApiResult {
+            var elevatorApiResult = new ElevatorApiResult {
                 IsSuccess = isOk,
                 ErrorCode = isOk ? ElevatorApiErrorCode.None : ElevatorApiErrorCode.RemoteRejected,
                 ErrorMessage = errMsg,
@@ -188,6 +188,8 @@ namespace ZakYip.PlcBridge.Ingress {
                 ResponsePayload = snapshot.ResponsePayload,
                 Curl = snapshot.Curl
             };
+            _logger.LogInformation($"推送生产订单信息:{JsonConvert.SerializeObject(elevatorApiResult, Formatting.Indented)}");
+            return elevatorApiResult;
         }
 
         private async ValueTask<HttpSnapshot> PostAsync(string relativePath, string requestPayload, CancellationToken cancellationToken) {
