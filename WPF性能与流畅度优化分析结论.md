@@ -123,3 +123,43 @@
 - 动画生命周期控制
 - 日志级别收敛
 这四件事入手，投入产出比最高。
+
+---
+
+## 7. 针对本次问题：XAML 结构是否还有优化空间？
+
+结论：**有，且空间不小**。当前 `MainWindow.xaml` 结构可读性与复用性还有明显提升余地，优化后不仅更易维护，也会间接改善 UI 流畅性。
+
+### 7.1 结构层面的主要改进点（建议优先）
+
+1. **拆分超大单页 XAML（MainWindow）**
+- 现状：`MainWindow.xaml` 承载标题栏、进度区、工单输入区、状态栏、加载/结果遮罩等全部结构。
+- 建议：拆为多个 `UserControl`（如 `TitleBarView`、`ProgressStepsView`、`OrderFormView`、`ConnectionStatusBarView`、`ResultOverlayView`）。
+- 收益：降低单文件复杂度，减少后续改动引发的回归风险。
+
+2. **提取重复 UI 片段为模板/控件**
+- 现状：三段流程节点（呼叫/到位/进料）结构高度重复；四个输入行（工单/物料/批次/箱数）结构高度重复。
+- 建议：用 `DataTemplate + ItemsControl` 或自定义 `UserControl` 复用结构，避免复制粘贴式维护。
+- 收益：减少重复绑定与样式散落，后续改样式只改一处。
+
+3. **统一资源归属，避免页面内资源堆积**
+- 现状：`MainWindow.xaml` 的 `Window.Resources` 仍显式声明多组 Converter；同时 App/Resources 层已有集中资源字典。
+- 建议：将通用 Converter/Style 统一下沉到 `ZakYip.PlcBridge.Resources`，页面仅保留页面私有资源。
+- 收益：资源职责更清晰，避免多窗口场景重复定义。
+
+### 7.2 次优先级结构优化
+
+4. **合并成功/失败动画模板的重复结构**
+- 现状：`OperationResultStatus=Success/Failure` 两个 `DataTrigger` 中 `LottieAnimationView` 结构基本相同，仅资源路径不同。
+- 建议：统一一个模板，基于状态映射 `ResourcePath`。
+- 收益：减少模板重复、后续动画参数调整更安全。
+
+5. **简化过深嵌套容器**
+- 现状：部分区域存在多层 `StackPanel + Border + StackPanel`。
+- 建议：在关键表单区/状态区适度改为 `Grid` 布局，降低测量与排列链路复杂度。
+- 收益：布局性能更稳定，结构也更直观。
+
+6. **清理未使用命名空间与属性噪声**
+- 现状：`MainWindow.xaml` 中存在未使用的 `xmlns`（如 `local`/`presentation`）与可精简的绑定参数。
+- 建议：清理未用声明，保持页面“最小可读面”。
+- 收益：降低认知负担，减少后续误用概率。
