@@ -28,19 +28,24 @@ namespace ZakYip.PlcBridge.Host.Servers {
             _options = options;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) {
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             var heartbeatSignal = _options.CurrentValue.Fields.FirstOrDefault(f =>
                 f.Role == ElevatorHandshakeFieldRole.HeartbeatSignal);
 
             while (!stoppingToken.IsCancellationRequested) {
                 if (_plcManager.Status == PlcStatus.Connected) {
-                    _safeExecutor.Execute(async () => {
+                    await _safeExecutor.ExecuteAsync(async () => {
                         if (heartbeatSignal is not null) {
                             var readInt16Async = await _plcManager.ReadInt16Async(new PlcInt32Address {
                                 Area = PlcDataArea.Db,
                                 DbNumber = _options.CurrentValue.DbNumber,
                                 ByteOffset = heartbeatSignal.ByteOffset
                             }, stoppingToken);
+
+                            if (readInt16Async is null) {
+                                _logger.LogWarning("心跳读取失败，已跳过本次写入");
+                                return;
+                            }
 
                             int writeValue = readInt16Async == 1 ? 0 : 1; // 切换心跳信号状态
 
@@ -52,11 +57,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
                         }
 
                         // 心跳检测逻辑
-                    }, "心跳检测异常");
+                    }, "心跳检测异常").ConfigureAwait(false);
                 }
-            }
 
-            return Task.CompletedTask;
+                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken).ConfigureAwait(false);
+            }
         }
     }
 }
