@@ -42,11 +42,6 @@ namespace ZakYip.PlcBridge.Host.Servers {
                                 ByteOffset = heartbeatSignal.ByteOffset
                             }, stoppingToken);
 
-                            if (heartbeatValue is null) {
-                                _logger.LogWarning("心跳读取失败，已跳过本次写入");
-                                return;
-                            }
-
                             int writeValue = heartbeatValue == 1 ? 0 : 1; // 切换心跳信号状态
 
                             await _plcManager.WriteInt16Async(new PlcInt32Address {
