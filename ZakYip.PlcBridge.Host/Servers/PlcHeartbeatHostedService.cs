@@ -36,18 +36,18 @@ namespace ZakYip.PlcBridge.Host.Servers {
                 if (_plcManager.Status == PlcStatus.Connected) {
                     await _safeExecutor.ExecuteAsync(async () => {
                         if (heartbeatSignal is not null) {
-                            var readInt16Async = await _plcManager.ReadInt16Async(new PlcInt32Address {
+                            var heartbeatValue = await _plcManager.ReadInt16Async(new PlcInt32Address {
                                 Area = PlcDataArea.Db,
                                 DbNumber = _options.CurrentValue.DbNumber,
                                 ByteOffset = heartbeatSignal.ByteOffset
                             }, stoppingToken);
 
-                            if (readInt16Async is null) {
+                            if (heartbeatValue is null) {
                                 _logger.LogWarning("心跳读取失败，已跳过本次写入");
                                 return;
                             }
 
-                            int writeValue = readInt16Async == 1 ? 0 : 1; // 切换心跳信号状态
+                            int writeValue = heartbeatValue == 1 ? 0 : 1; // 切换心跳信号状态
 
                             await _plcManager.WriteInt16Async(new PlcInt32Address {
                                 Area = PlcDataArea.Db,
