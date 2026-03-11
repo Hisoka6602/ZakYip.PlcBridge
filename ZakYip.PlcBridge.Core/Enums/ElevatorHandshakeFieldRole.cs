@@ -83,5 +83,11 @@ namespace ZakYip.PlcBridge.Core.Enums {
         /// </summary>
         [Description("可执行查询信号")]
         QueryExecutableSignal = 12,
+
+        /// <summary>
+        /// 心跳检测信号（用于维持对接链路在线状态或检测通信存活）
+        /// </summary>
+        [Description("心跳检测信号")]
+        HeartbeatSignal = 13
     }
 }

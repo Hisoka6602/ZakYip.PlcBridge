@@ -106,6 +106,7 @@ try {
 
     builder.Services.AddHostedService<ElevatorBridgeHostedService>();
     builder.Services.AddHostedService<ElevatorTaskMonitorHostedService>();
+    builder.Services.AddHostedService<PlcHeartbeatHostedService>();
 
     //builder.Services.AddHostedService<UsageLimitHostedService>();
 #if !DEBUG

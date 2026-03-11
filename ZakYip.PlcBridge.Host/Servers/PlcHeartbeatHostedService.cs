@@ -1,0 +1,58 @@
+﻿using ZakYip.PlcBridge.Core;
+using ZakYip.PlcBridge.Core.Enums;
+using Microsoft.Extensions.Options;
+using ZakYip.PlcBridge.Core.Models;
+using ZakYip.PlcBridge.Core.Manager;
+using ZakYip.PlcBridge.Core.Options;
+using ZakYip.PlcBridge.Core.SignalR;
+using ZakYip.PlcBridge.Core.Utilities;
+
+namespace ZakYip.PlcBridge.Host.Servers {
+
+    public class PlcHeartbeatHostedService : BackgroundService {
+        private readonly ILogger<PlcHeartbeatHostedService> _logger;
+        private readonly SafeExecutor _safeExecutor;
+        private readonly IElevatorApiClient _elevatorApiClient;
+        private readonly IPlcManager _plcManager;
+        private readonly IOptionsMonitor<ElevatorHandshakeDbOptions> _options;
+
+        public PlcHeartbeatHostedService(ILogger<PlcHeartbeatHostedService> logger,
+            SafeExecutor safeExecutor,
+            IElevatorApiClient elevatorApiClient,
+            IPlcManager plcManager,
+            IOptionsMonitor<ElevatorHandshakeDbOptions> options) {
+            _logger = logger;
+            _safeExecutor = safeExecutor;
+            _elevatorApiClient = elevatorApiClient;
+            _plcManager = plcManager;
+            _options = options;
+        }
+
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) {
+            var heartbeatSignal = _options.CurrentValue.Fields.FirstOrDefault(f =>
+                f.Role == ElevatorHandshakeFieldRole.HeartbeatSignal);
+
+            while (!stoppingToken.IsCancellationRequested) {
+                if (_plcManager.Status == PlcStatus.Connected) {
+                    _safeExecutor.Execute(async () => {
+                        if (heartbeatSignal is not null) {
+                            var readInt16Async = await _plcManager.ReadInt16Async(new PlcInt32Address {
+                                Area = PlcDataArea.Db,
+                                DbNumber = _options.CurrentValue.DbNumber,
+                                ByteOffset = heartbeatSignal.ByteOffset
+                            }, stoppingToken);
+
+                            int writeValue = readInt16Async == 1 ? 0 : 1; // 切换心跳信号状态
+
+                            _plcManager.WriteInt16Async()
+                        }
+
+                        // 心跳检测逻辑
+                    }, "心跳检测异常");
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}
