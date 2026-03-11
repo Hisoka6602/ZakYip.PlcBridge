@@ -44,7 +44,11 @@ namespace ZakYip.PlcBridge.Host.Servers {
 
                             int writeValue = readInt16Async == 1 ? 0 : 1; // 切换心跳信号状态
 
-                            _plcManager.WriteInt16Async()
+                            await _plcManager.WriteInt16Async(new PlcInt32Address {
+                                Area = PlcDataArea.Db,
+                                DbNumber = _options.CurrentValue.DbNumber,
+                                ByteOffset = heartbeatSignal.ByteOffset
+                            }, (short)writeValue, stoppingToken);
                         }
 
                         // 心跳检测逻辑

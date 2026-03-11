@@ -108,6 +108,22 @@ namespace ZakYip.PlcBridge.Core.Manager {
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 写入 Int32 值（写入失败通过 Faulted 事件隔离）
+        /// </summary>
+        ValueTask WriteInt32Async(
+            PlcInt32Address address,
+            int value,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 写入 Int16 值（写入失败通过 Faulted 事件隔离）
+        /// </summary>
+        ValueTask WriteInt16Async(
+            PlcInt32Address address,
+            short value,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 读取字符串值（读取失败返回 null，异常通过 Faulted 事件隔离）
         /// </summary>
         ValueTask<string?> ReadStringAsync(
