@@ -755,6 +755,112 @@ namespace ZakYip.PlcBridge.Drivers {
         }
 
         /// <summary>
+        /// 写入一个 Int32 值（失败时静默返回；异常通过 Faulted 上报）。
+        /// </summary>
+        public async ValueTask WriteInt32Async(PlcInt32Address address, int value, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，写 Int32 被忽略");
+                return;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，写 Int32 被忽略");
+                return;
+            }
+
+            if (!ReflectionAccessor.TryExtractInt32Address(address, out var area, out var dbNumber, out var startByteAdr)) {
+                RaiseFaulted("写 Int32 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return;
+            }
+
+            var buffer = new byte[4];
+            BinaryPrimitives.WriteInt32BigEndian(buffer, value);
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.WriteTimeoutMs > 0) {
+                    writeCts.CancelAfter(TimeSpan.FromMilliseconds(opt.WriteTimeoutMs));
+                }
+
+                await plc.WriteBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        value: buffer,
+                        writeCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                MarkDisconnected("写 Int32 异常");
+                RaiseFaulted("写 Int32 异常", ex);
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        /// <summary>
+        /// 写入一个 Int16 值（失败时静默返回；异常通过 Faulted 上报）。
+        /// </summary>
+        public async ValueTask WriteInt16Async(PlcInt32Address address, short value, CancellationToken cancellationToken = default) {
+            if (Volatile.Read(ref _disposed) == 1) {
+                return;
+            }
+
+            if (!IsConnected) {
+                _logger.LogWarning("PLC 未连接，写 Int16 被忽略");
+                return;
+            }
+
+            var plc = _plc;
+            if (plc is null) {
+                _logger.LogWarning("PLC 实例为空，写 Int16 被忽略");
+                return;
+            }
+
+            if (!ReflectionAccessor.TryExtractInt32Address(address, out var area, out var dbNumber, out var startByteAdr)) {
+                RaiseFaulted("写 Int16 地址解析失败（字段缺失或命名不匹配）", new InvalidOperationException(address.GetType().FullName ?? "UnknownType"));
+                return;
+            }
+
+            var buffer = new byte[2];
+            BinaryPrimitives.WriteInt16BigEndian(buffer, value);
+
+            await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                var opt = _optionsMonitor.CurrentValue;
+
+                using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                if (opt.WriteTimeoutMs > 0) {
+                    writeCts.CancelAfter(TimeSpan.FromMilliseconds(opt.WriteTimeoutMs));
+                }
+
+                await plc.WriteBytesAsync(
+                        area,
+                        db: dbNumber,
+                        startByteAdr: startByteAdr,
+                        value: buffer,
+                        writeCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                MarkDisconnected("写 Int16 异常");
+                RaiseFaulted("写 Int16 异常", ex);
+            }
+            finally {
+                _requestGate.Release();
+            }
+        }
+
+        /// <summary>
         /// 读取一个 S7 STRING 字符串（失败返回 null；异常通过 Faulted 上报）。
         /// </summary>
         /// <remarks>
