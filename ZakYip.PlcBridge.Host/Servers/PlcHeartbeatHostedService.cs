@@ -55,7 +55,7 @@ namespace ZakYip.PlcBridge.Host.Servers {
                     }, "心跳检测异常").ConfigureAwait(false);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken).ConfigureAwait(false);
+                await Task.Delay(500, stoppingToken).ConfigureAwait(false);
             }
         }
     }
