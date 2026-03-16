@@ -104,6 +104,7 @@ try {
     builder.Services.Configure<LogCleanupSettings>(
         builder.Configuration.GetSection("LogCleanup"));
 
+    builder.Services.AddHostedService<LogCleanupService>();
     builder.Services.AddHostedService<ElevatorBridgeHostedService>();
     builder.Services.AddHostedService<ElevatorTaskMonitorHostedService>();
     builder.Services.AddHostedService<PlcHeartbeatHostedService>();
